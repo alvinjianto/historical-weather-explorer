@@ -1,0 +1,5 @@
+{
+  "name": "Historical Weather Explorer",
+  "description": "Explore historical weather data for any location on the map. Select a date and time to see past weather conditions.",
+  "requestFramePermissions": ["geolocation"]
+}
