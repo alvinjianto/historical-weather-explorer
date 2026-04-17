@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+:root {
+  --font-sans: var(--font-geist-sans);
+}
+
+body {
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Hide scrollbars for the hourly timeline */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
