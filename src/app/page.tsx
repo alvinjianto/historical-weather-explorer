@@ -5,20 +5,27 @@ import { format, subDays, addDays, parseISO, isBefore, startOfDay } from 'date-f
 import { MapPin, Calendar, Clock, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
 import WeatherDisplay from '@/components/WeatherDisplay';
 import SearchComponent from '@/components/SearchComponent';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { parseWeatherResponse } from '@/lib/weatherParser';
 import { Location, WeatherData } from '@/types/weather';
 import { cn } from '@/lib/utils';
 
+const DEFAULT_LOCATION: Location = { lat: 51.505, lng: -0.09 };
+const DEFAULT_LOCATION_NAME = 'London, United Kingdom';
+
 export default function Page() {
-  const [location, setLocation] = useState<Location>({ lat: 51.505, lng: -0.09 });
-  const [locationName, setLocationName] = useState<string>('London, United Kingdom');
+  const [location, setLocation] = useState<Location>(DEFAULT_LOCATION);
+  const [locationName, setLocationName] = useState<string>(DEFAULT_LOCATION_NAME);
   const [selectedDate, setSelectedDate] = useState<string>(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
   const [selectedHour, setSelectedHour] = useState<number>(new Date().getHours());
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [unit, setUnit] = useState<'C' | 'F'>('C');
+  const [unit, setUnit] = useState<'C' | 'F'>('F');
+  const [windUnit, setWindUnit] = useState<'km' | 'mi'>('mi');
+
+  const { isLocating, getCurrentPosition } = useGeolocation();
 
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
     setIsGeocoding(true);
@@ -46,44 +53,12 @@ export default function Page() {
       const response = await fetch(
         `/api/weather?latitude=${loc.lat}&longitude=${loc.lng}&start_date=${date}&end_date=${date}`
       );
-
       if (!response.ok) throw new Error('Failed to fetch weather data');
 
       const data = await response.json();
+      if (!data.hourly?.time) throw new Error('No data available for this date');
 
-      if (!data.hourly || !data.hourly.time) {
-        throw new Error('No data available for this date');
-      }
-
-      const temperatures = data.hourly.temperature_2m;
-      const humidities = data.hourly.relative_humidity_2m;
-      const windSpeeds = data.hourly.wind_speed_10m;
-      const precipitations = data.hourly.precipitation;
-
-      setWeatherData({
-        time: data.hourly.time[hour],
-        temperature: temperatures[hour],
-        relativeHumidity: humidities[hour],
-        windSpeed: windSpeeds[hour],
-        precipitation: precipitations[hour],
-        weatherCode: data.hourly.weather_code[hour],
-        hourly: {
-          time: data.hourly.time,
-          temperature: temperatures,
-          weatherCode: data.hourly.weather_code,
-          humidity: humidities,
-          windSpeed: windSpeeds,
-          precipitation: precipitations,
-        },
-        daily: {
-          maxTemp: Math.max(...temperatures),
-          minTemp: Math.min(...temperatures),
-          maxHumidity: Math.max(...humidities),
-          minHumidity: Math.min(...humidities),
-          maxWind: Math.max(...windSpeeds),
-          minWind: Math.min(...windSpeeds),
-        },
-      });
+      setWeatherData(parseWeatherResponse(data, hour));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setWeatherData(null);
@@ -94,24 +69,15 @@ export default function Page() {
 
   // On mount: try geolocation, fall back to default London
   useEffect(() => {
-    if (navigator.geolocation) {
-      setIsLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
-          setLocation(newLoc);
-          setIsLocating(false);
-          reverseGeocode(newLoc.lat, newLoc.lng);
-          fetchWeatherData(newLoc, selectedDate, selectedHour);
-        },
-        () => {
-          setIsLocating(false);
-          fetchWeatherData({ lat: 51.505, lng: -0.09 }, selectedDate, selectedHour);
-        }
-      );
-    } else {
-      fetchWeatherData(location, selectedDate, selectedHour);
-    }
+    getCurrentPosition(
+      (lat, lng) => {
+        const newLoc = { lat, lng };
+        setLocation(newLoc);
+        reverseGeocode(lat, lng);
+        fetchWeatherData(newLoc, selectedDate, selectedHour);
+      },
+      () => fetchWeatherData(DEFAULT_LOCATION, selectedDate, selectedHour)
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -129,18 +95,11 @@ export default function Page() {
   };
 
   const handleCurrentLocation = () => {
-    if (navigator.geolocation) {
-      setIsLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
-          setLocation(newLoc);
-          reverseGeocode(newLoc.lat, newLoc.lng);
-          setIsLocating(false);
-        },
-        () => setIsLocating(false)
-      );
-    }
+    getCurrentPosition((lat, lng) => {
+      const newLoc = { lat, lng };
+      setLocation(newLoc);
+      reverseGeocode(lat, lng);
+    });
   };
 
   const handlePrevDay = () => {
@@ -172,7 +131,7 @@ export default function Page() {
             Discover precise atmospheric conditions from any point in time, anywhere in the world.
           </p>
 
-          <div className="flex justify-center pt-2">
+          <div className="flex justify-center gap-3 pt-2">
             <div className="bg-zinc-100 p-1 rounded-xl inline-flex">
               <button
                 onClick={() => setUnit('C')}
@@ -191,6 +150,26 @@ export default function Page() {
                 )}
               >
                 Fahrenheit
+              </button>
+            </div>
+            <div className="bg-zinc-100 p-1 rounded-xl inline-flex">
+              <button
+                onClick={() => setWindUnit('km')}
+                className={cn(
+                  "px-6 py-1.5 text-xs font-bold rounded-lg transition-all",
+                  windUnit === 'km' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
+                )}
+              >
+                km/h
+              </button>
+              <button
+                onClick={() => setWindUnit('mi')}
+                className={cn(
+                  "px-6 py-1.5 text-xs font-bold rounded-lg transition-all",
+                  windUnit === 'mi' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
+                )}
+              >
+                mph
               </button>
             </div>
           </div>
@@ -284,7 +263,7 @@ export default function Page() {
 
           {/* Results Display */}
           <div className="lg:col-span-7">
-            <WeatherDisplay data={weatherData} loading={loading} error={error} unit={unit} />
+            <WeatherDisplay data={weatherData} loading={loading} error={error} unit={unit} windUnit={windUnit} />
           </div>
         </div>
 

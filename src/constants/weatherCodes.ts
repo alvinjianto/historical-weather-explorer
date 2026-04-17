@@ -18,7 +18,14 @@ export const getWeatherDescription = (code: number): { description: string; icon
     71: { description: 'Snow fall: Slight', icon: 'CloudSnow' },
     73: { description: 'Snow fall: Moderate', icon: 'CloudSnow' },
     75: { description: 'Snow fall: Heavy intensity', icon: 'CloudSnow' },
+    80: { description: 'Rain showers: Slight', icon: 'CloudRain' },
+    81: { description: 'Rain showers: Moderate', icon: 'CloudRain' },
+    82: { description: 'Rain showers: Violent', icon: 'CloudRain' },
+    85: { description: 'Snow showers: Slight', icon: 'CloudSnow' },
+    86: { description: 'Snow showers: Heavy', icon: 'CloudSnow' },
     95: { description: 'Thunderstorm: Slight or moderate', icon: 'CloudLightning' },
+    96: { description: 'Thunderstorm with slight hail', icon: 'CloudLightning' },
+    99: { description: 'Thunderstorm with heavy hail', icon: 'CloudLightning' },
   };
 
   return codes[code] || { description: 'Unknown', icon: 'Cloud' };
