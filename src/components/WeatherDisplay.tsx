@@ -17,9 +17,10 @@ interface WeatherDisplayProps {
   error: string | null;
   unit: 'C' | 'F';
   windUnit: 'km' | 'mi';
+  onRetry?: () => void;
 }
 
-const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ data, loading, error, unit, windUnit }) => {
+const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ data, loading, error, unit, windUnit, onRetry }) => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-[400px] space-y-6 bg-white rounded-[2.5rem] border border-zinc-200 shadow-sm animate-pulse">
@@ -42,6 +43,14 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ data, loading, error, u
         <p className="text-red-700/70 max-w-xs mx-auto text-sm leading-relaxed">
           {error}. Try selecting a different date or location.
         </p>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="mt-6 px-5 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition-colors active:scale-95"
+          >
+            Try Again
+          </button>
+        )}
       </div>
     );
   }
@@ -91,6 +100,9 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ data, loading, error, u
           </span>
           <span className="text-zinc-400 font-bold uppercase tracking-widest text-[10px] mt-1">
             {unit === 'C' ? 'Celsius' : 'Fahrenheit'}
+          </span>
+          <span className="text-zinc-400 text-xs mt-1">
+            Feels like {convertTemp(data.feelsLike, unit)}°
           </span>
         </div>
       </div>

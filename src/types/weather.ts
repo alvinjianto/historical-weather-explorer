@@ -1,6 +1,7 @@
 export interface WeatherData {
   time: string;
   temperature: number;
+  feelsLike: number;
   relativeHumidity: number;
   windSpeed: number;
   precipitation: number;
@@ -8,6 +9,7 @@ export interface WeatherData {
   hourly: {
     time: string[];
     temperature: number[];
+    feelsLike: number[];
     weatherCode: number[];
     humidity: number[];
     windSpeed: number[];
