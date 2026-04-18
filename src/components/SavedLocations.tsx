@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { Bookmark, X } from 'lucide-react';
-import { Location } from '@/types/weather';
-import { SavedLocation } from '@/app/page';
+import { Location, SavedLocation } from '@/types/weather';
 
 interface SavedLocationsProps {
   saved: SavedLocation[];

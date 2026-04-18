@@ -1,26 +1,25 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { format, subDays, addDays, parseISO, isBefore, startOfDay } from 'date-fns';
 import { MapPin, Calendar, Clock, Navigation, ChevronLeft, ChevronRight, Bookmark, BookmarkPlus } from 'lucide-react';
 import WeatherDisplay from '@/components/WeatherDisplay';
 import SearchComponent from '@/components/SearchComponent';
 import SavedLocations from '@/components/SavedLocations';
+import AuthButton from '@/components/AuthButton';
+import { useAuth } from '@/context/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { parseWeatherResponse } from '@/lib/weatherParser';
-import { Location, WeatherData } from '@/types/weather';
+import { Location, WeatherData, SavedLocation } from '@/types/weather';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_LOCATION: Location = { lat: 51.505, lng: -0.09 };
 const DEFAULT_LOCATION_NAME = 'London, United Kingdom';
 
-export interface SavedLocation {
-  name: string;
-  lat: number;
-  lng: number;
-}
-
 export default function Page() {
+  const { user } = useAuth();
+
   const [location, setLocation] = useState<Location>(DEFAULT_LOCATION);
   const [locationName, setLocationName] = useState<string>(DEFAULT_LOCATION_NAME);
   const [selectedDate, setSelectedDate] = useState<string>(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
@@ -35,7 +34,158 @@ export default function Page() {
 
   const { isLocating, getCurrentPosition } = useGeolocation();
 
-  // Load preferences from localStorage on mount
+  // Track previous user id to detect login/logout transitions
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
+  // ── Preferences ────────────────────────────────────────────────────────────
+
+  const applyPreferences = (u: 'C' | 'F', w: 'km' | 'mi') => {
+    setUnit(u);
+    setWindUnit(w);
+    localStorage.setItem('weatherUnit', u);
+    localStorage.setItem('weatherWindUnit', w);
+  };
+
+  const handleSetUnit = (u: 'C' | 'F') => {
+    setUnit(u);
+    localStorage.setItem('weatherUnit', u);
+    if (user) {
+      createClient().from('user_preferences').upsert({
+        user_id: user.id,
+        unit: u,
+        wind_unit: windUnit,
+        updated_at: new Date().toISOString(),
+      }).then(() => {});
+    }
+  };
+
+  const handleSetWindUnit = (w: 'km' | 'mi') => {
+    setWindUnit(w);
+    localStorage.setItem('weatherWindUnit', w);
+    if (user) {
+      createClient().from('user_preferences').upsert({
+        user_id: user.id,
+        unit,
+        wind_unit: w,
+        updated_at: new Date().toISOString(),
+      }).then(() => {});
+    }
+  };
+
+  // ── Saved locations ────────────────────────────────────────────────────────
+
+  const persistSavedLocations = (locs: SavedLocation[]) => {
+    localStorage.setItem('savedLocations', JSON.stringify(locs));
+  };
+
+  const handleSaveLocation = async () => {
+    const alreadySaved = savedLocations.some(
+      l => l.lat === location.lat && l.lng === location.lng
+    );
+    if (alreadySaved) return;
+
+    if (user) {
+      const { data, error } = await createClient()
+        .from('saved_locations')
+        .insert({ user_id: user.id, name: locationName, lat: location.lat, lng: location.lng })
+        .select('id')
+        .single();
+
+      if (!error && data) {
+        const newLoc: SavedLocation = { id: data.id, name: locationName, lat: location.lat, lng: location.lng };
+        setSavedLocations(prev => {
+          const updated = [...prev, newLoc];
+          persistSavedLocations(updated);
+          return updated;
+        });
+      }
+    } else {
+      const newLoc: SavedLocation = { name: locationName, lat: location.lat, lng: location.lng };
+      setSavedLocations(prev => {
+        const updated = [...prev, newLoc];
+        persistSavedLocations(updated);
+        return updated;
+      });
+    }
+  };
+
+  const handleRemoveSavedLocation = async (index: number) => {
+    const loc = savedLocations[index];
+
+    if (user && loc.id) {
+      await createClient().from('saved_locations').delete().eq('id', loc.id);
+    }
+
+    setSavedLocations(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      persistSavedLocations(updated);
+      return updated;
+    });
+  };
+
+  const isLocationSaved = savedLocations.some(
+    l => l.lat === location.lat && l.lng === location.lng
+  );
+
+  // ── Load from DB on login / revert to localStorage on logout ───────────────
+
+  useEffect(() => {
+    const prevId = prevUserIdRef.current;
+    const currId = user?.id ?? null;
+
+    // Skip the very first render (undefined → whatever)
+    if (prevId === undefined) {
+      prevUserIdRef.current = currId;
+      return;
+    }
+
+    prevUserIdRef.current = currId;
+
+    if (currId && currId !== prevId) {
+      // User just logged in — fetch their DB data
+      (async () => {
+        const db = createClient();
+        const [prefsResult, locsResult] = await Promise.all([
+          db.from('user_preferences').select('unit, wind_unit').eq('user_id', currId).single(),
+          db.from('saved_locations').select('id, name, lat, lng').eq('user_id', currId).order('created_at'),
+        ]);
+
+        if (prefsResult.data) {
+          applyPreferences(
+            prefsResult.data.unit as 'C' | 'F',
+            prefsResult.data.wind_unit as 'km' | 'mi'
+          );
+        }
+
+        if (locsResult.data) {
+          const locs: SavedLocation[] = locsResult.data.map(r => ({
+            id: r.id,
+            name: r.name,
+            lat: r.lat,
+            lng: r.lng,
+          }));
+          setSavedLocations(locs);
+          persistSavedLocations(locs);
+        }
+      })();
+    } else if (!currId && prevId) {
+      // User just logged out — fall back to localStorage
+      const savedUnit = localStorage.getItem('weatherUnit');
+      if (savedUnit === 'C' || savedUnit === 'F') setUnit(savedUnit);
+
+      const savedWindUnit = localStorage.getItem('weatherWindUnit');
+      if (savedWindUnit === 'km' || savedWindUnit === 'mi') setWindUnit(savedWindUnit);
+
+      const savedLocs = localStorage.getItem('savedLocations');
+      if (savedLocs) {
+        try { setSavedLocations(JSON.parse(savedLocs)); } catch { /* ignore */ }
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // ── Bootstrap on mount (localStorage only — DB load happens via user effect) ─
+
   useEffect(() => {
     const savedUnit = localStorage.getItem('weatherUnit');
     if (savedUnit === 'C' || savedUnit === 'F') setUnit(savedUnit);
@@ -49,35 +199,7 @@ export default function Page() {
     }
   }, []);
 
-  const handleSetUnit = (u: 'C' | 'F') => {
-    setUnit(u);
-    localStorage.setItem('weatherUnit', u);
-  };
-
-  const handleSetWindUnit = (u: 'km' | 'mi') => {
-    setWindUnit(u);
-    localStorage.setItem('weatherWindUnit', u);
-  };
-
-  const handleSaveLocation = () => {
-    setSavedLocations(prev => {
-      const alreadySaved = prev.some(l => l.lat === location.lat && l.lng === location.lng);
-      if (alreadySaved) return prev;
-      const updated = [...prev, { name: locationName, lat: location.lat, lng: location.lng }];
-      localStorage.setItem('savedLocations', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const handleRemoveSavedLocation = (index: number) => {
-    setSavedLocations(prev => {
-      const updated = prev.filter((_, i) => i !== index);
-      localStorage.setItem('savedLocations', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const isLocationSaved = savedLocations.some(l => l.lat === location.lat && l.lng === location.lng);
+  // ── Weather data ───────────────────────────────────────────────────────────
 
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
     setIsGeocoding(true);
@@ -178,16 +300,23 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-zinc-50 font-sans text-zinc-900 flex flex-col items-center py-12 px-4">
       <div className="w-full max-w-4xl space-y-12">
-        <header className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center p-3 bg-zinc-900 rounded-2xl shadow-lg mb-2">
-            <Clock className="text-white w-8 h-8" />
+        <header className="space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col items-start space-y-1">
+              <div className="inline-flex items-center justify-center p-3 bg-zinc-900 rounded-2xl shadow-lg">
+                <Clock className="text-white w-8 h-8" />
+              </div>
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">WeatherHistory</h1>
+              <p className="text-zinc-500 text-base max-w-xl">
+                Discover precise atmospheric conditions from any point in time, anywhere in the world.
+              </p>
+            </div>
+            <div className="pt-1">
+              <AuthButton />
+            </div>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">WeatherHistory</h1>
-          <p className="text-zinc-500 text-lg max-w-xl mx-auto">
-            Discover precise atmospheric conditions from any point in time, anywhere in the world.
-          </p>
 
-          <div className="flex justify-center gap-3 pt-2">
+          <div className="flex flex-wrap gap-3 pt-2">
             <div className="bg-zinc-100 p-1 rounded-xl inline-flex">
               <button
                 onClick={() => handleSetUnit('C')}

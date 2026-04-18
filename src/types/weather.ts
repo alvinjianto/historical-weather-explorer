@@ -30,3 +30,10 @@ export interface Location {
   lng: number;
   name?: string;
 }
+
+export interface SavedLocation {
+  id?: string; // Supabase UUID when persisted to DB
+  name: string;
+  lat: number;
+  lng: number;
+}
