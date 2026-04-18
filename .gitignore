@@ -34,3 +34,5 @@ yarn-error.log*
 
 # Local tooling
 .claude/
+.agents/
+skills-lock.json
