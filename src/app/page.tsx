@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, subDays, addDays, parseISO, isBefore, startOfDay } from 'date-fns';
-import { MapPin, Calendar, Clock, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Calendar, Clock, Navigation, ChevronLeft, ChevronRight, Bookmark, BookmarkPlus } from 'lucide-react';
 import WeatherDisplay from '@/components/WeatherDisplay';
 import SearchComponent from '@/components/SearchComponent';
+import SavedLocations from '@/components/SavedLocations';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { parseWeatherResponse } from '@/lib/weatherParser';
 import { Location, WeatherData } from '@/types/weather';
@@ -12,6 +13,12 @@ import { cn } from '@/lib/utils';
 
 const DEFAULT_LOCATION: Location = { lat: 51.505, lng: -0.09 };
 const DEFAULT_LOCATION_NAME = 'London, United Kingdom';
+
+export interface SavedLocation {
+  name: string;
+  lat: number;
+  lng: number;
+}
 
 export default function Page() {
   const [location, setLocation] = useState<Location>(DEFAULT_LOCATION);
@@ -24,8 +31,53 @@ export default function Page() {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [unit, setUnit] = useState<'C' | 'F'>('F');
   const [windUnit, setWindUnit] = useState<'km' | 'mi'>('mi');
+  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
 
   const { isLocating, getCurrentPosition } = useGeolocation();
+
+  // Load preferences from localStorage on mount
+  useEffect(() => {
+    const savedUnit = localStorage.getItem('weatherUnit');
+    if (savedUnit === 'C' || savedUnit === 'F') setUnit(savedUnit);
+
+    const savedWindUnit = localStorage.getItem('weatherWindUnit');
+    if (savedWindUnit === 'km' || savedWindUnit === 'mi') setWindUnit(savedWindUnit);
+
+    const savedLocs = localStorage.getItem('savedLocations');
+    if (savedLocs) {
+      try { setSavedLocations(JSON.parse(savedLocs)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  const handleSetUnit = (u: 'C' | 'F') => {
+    setUnit(u);
+    localStorage.setItem('weatherUnit', u);
+  };
+
+  const handleSetWindUnit = (u: 'km' | 'mi') => {
+    setWindUnit(u);
+    localStorage.setItem('weatherWindUnit', u);
+  };
+
+  const handleSaveLocation = () => {
+    setSavedLocations(prev => {
+      const alreadySaved = prev.some(l => l.lat === location.lat && l.lng === location.lng);
+      if (alreadySaved) return prev;
+      const updated = [...prev, { name: locationName, lat: location.lat, lng: location.lng }];
+      localStorage.setItem('savedLocations', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleRemoveSavedLocation = (index: number) => {
+    setSavedLocations(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      localStorage.setItem('savedLocations', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const isLocationSaved = savedLocations.some(l => l.lat === location.lat && l.lng === location.lng);
 
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
     setIsGeocoding(true);
@@ -102,6 +154,10 @@ export default function Page() {
     });
   };
 
+  const handleRetry = () => {
+    fetchWeatherData(location, selectedDate, selectedHour);
+  };
+
   const handlePrevDay = () => {
     setSelectedDate(format(subDays(parseISO(selectedDate), 1), 'yyyy-MM-dd'));
   };
@@ -134,7 +190,7 @@ export default function Page() {
           <div className="flex justify-center gap-3 pt-2">
             <div className="bg-zinc-100 p-1 rounded-xl inline-flex">
               <button
-                onClick={() => setUnit('C')}
+                onClick={() => handleSetUnit('C')}
                 className={cn(
                   "px-4 py-1.5 text-xs font-bold rounded-lg transition-all",
                   unit === 'C' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
@@ -143,7 +199,7 @@ export default function Page() {
                 Celsius
               </button>
               <button
-                onClick={() => setUnit('F')}
+                onClick={() => handleSetUnit('F')}
                 className={cn(
                   "px-4 py-1.5 text-xs font-bold rounded-lg transition-all",
                   unit === 'F' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
@@ -154,7 +210,7 @@ export default function Page() {
             </div>
             <div className="bg-zinc-100 p-1 rounded-xl inline-flex">
               <button
-                onClick={() => setWindUnit('km')}
+                onClick={() => handleSetWindUnit('km')}
                 className={cn(
                   "px-6 py-1.5 text-xs font-bold rounded-lg transition-all",
                   windUnit === 'km' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
@@ -163,7 +219,7 @@ export default function Page() {
                 km/h
               </button>
               <button
-                onClick={() => setWindUnit('mi')}
+                onClick={() => handleSetWindUnit('mi')}
                 className={cn(
                   "px-6 py-1.5 text-xs font-bold rounded-lg transition-all",
                   windUnit === 'mi' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
@@ -193,6 +249,22 @@ export default function Page() {
                     />
                   </div>
                   <button
+                    onClick={handleSaveLocation}
+                    disabled={isLocationSaved}
+                    title={isLocationSaved ? 'Location saved' : 'Save location'}
+                    className={cn(
+                      "p-4 rounded-2xl transition-all active:scale-95 shadow-md shrink-0",
+                      isLocationSaved
+                        ? "bg-zinc-100 text-zinc-400 cursor-default"
+                        : "bg-zinc-900 text-white hover:bg-zinc-800"
+                    )}
+                  >
+                    {isLocationSaved
+                      ? <Bookmark className="w-5 h-5" />
+                      : <BookmarkPlus className="w-5 h-5" />
+                    }
+                  </button>
+                  <button
                     onClick={handleCurrentLocation}
                     disabled={isLocating}
                     title="Use my location"
@@ -202,6 +274,13 @@ export default function Page() {
                   </button>
                 </div>
               </div>
+
+              {/* Saved Locations */}
+              <SavedLocations
+                saved={savedLocations}
+                onSelect={handleLocationChange}
+                onRemove={handleRemoveSavedLocation}
+              />
 
               <div className="grid grid-cols-1 gap-6">
                 {/* Date */}
@@ -263,7 +342,14 @@ export default function Page() {
 
           {/* Results Display */}
           <div className="lg:col-span-7">
-            <WeatherDisplay data={weatherData} loading={loading} error={error} unit={unit} windUnit={windUnit} />
+            <WeatherDisplay
+              data={weatherData}
+              loading={loading}
+              error={error}
+              unit={unit}
+              windUnit={windUnit}
+              onRetry={handleRetry}
+            />
           </div>
         </div>
 
