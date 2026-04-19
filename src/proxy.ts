@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -23,14 +23,15 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh session so it doesn't expire
+  // Refresh session token so it doesn't expire mid-visit
   await supabase.auth.getUser();
 
   return supabaseResponse;
 }
 
 export const config = {
+  // Run only on page routes — skip API routes, static files, and images
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

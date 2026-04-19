@@ -1,17 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { format, subDays, addDays, parseISO, isBefore, startOfDay } from 'date-fns';
-import { MapPin, Calendar, Clock, Navigation, ChevronLeft, ChevronRight, Bookmark, BookmarkPlus } from 'lucide-react';
+import { MapPin, Calendar, Clock, Navigation, ChevronLeft, ChevronRight, Bookmark, BookmarkPlus, X } from 'lucide-react';
 import WeatherDisplay from '@/components/WeatherDisplay';
 import SearchComponent from '@/components/SearchComponent';
 import SavedLocations from '@/components/SavedLocations';
 import AuthButton from '@/components/AuthButton';
 import { useAuth } from '@/context/AuthContext';
-import { createClient } from '@/lib/supabase/client';
+import { usePreferences } from '@/hooks/usePreferences';
+import { useSavedLocations } from '@/hooks/useSavedLocations';
+import { useWeatherData } from '@/hooks/useWeatherData';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { parseWeatherResponse } from '@/lib/weatherParser';
-import { Location, WeatherData, SavedLocation } from '@/types/weather';
+import { Location } from '@/types/weather';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_LOCATION: Location = { lat: 51.505, lng: -0.09 };
@@ -24,182 +25,22 @@ export default function Page() {
   const [locationName, setLocationName] = useState<string>(DEFAULT_LOCATION_NAME);
   const [selectedDate, setSelectedDate] = useState<string>(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
   const [selectedHour, setSelectedHour] = useState<number>(new Date().getHours());
-  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [unit, setUnit] = useState<'C' | 'F'>('F');
-  const [windUnit, setWindUnit] = useState<'km' | 'mi'>('mi');
-  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
+  const [authError, setAuthError] = useState<string | null>(null);
 
+  const { unit, windUnit, setUnit, setWindUnit } = usePreferences(user);
+  const { savedLocations, locationError, saveLocation, removeLocation, isLocationSaved } = useSavedLocations(user);
+  const { weatherData, loading, error: weatherError, fetchWeatherData } = useWeatherData();
   const { isLocating, getCurrentPosition } = useGeolocation();
 
-  // Track previous user id to detect login/logout transitions
-  const prevUserIdRef = useRef<string | null | undefined>(undefined);
-
-  // ── Preferences ────────────────────────────────────────────────────────────
-
-  const applyPreferences = (u: 'C' | 'F', w: 'km' | 'mi') => {
-    setUnit(u);
-    setWindUnit(w);
-    localStorage.setItem('weatherUnit', u);
-    localStorage.setItem('weatherWindUnit', w);
-  };
-
-  const handleSetUnit = (u: 'C' | 'F') => {
-    setUnit(u);
-    localStorage.setItem('weatherUnit', u);
-    if (user) {
-      createClient().from('user_preferences').upsert({
-        user_id: user.id,
-        unit: u,
-        wind_unit: windUnit,
-        updated_at: new Date().toISOString(),
-      }).then(() => {});
-    }
-  };
-
-  const handleSetWindUnit = (w: 'km' | 'mi') => {
-    setWindUnit(w);
-    localStorage.setItem('weatherWindUnit', w);
-    if (user) {
-      createClient().from('user_preferences').upsert({
-        user_id: user.id,
-        unit,
-        wind_unit: w,
-        updated_at: new Date().toISOString(),
-      }).then(() => {});
-    }
-  };
-
-  // ── Saved locations ────────────────────────────────────────────────────────
-
-  const persistSavedLocations = (locs: SavedLocation[]) => {
-    localStorage.setItem('savedLocations', JSON.stringify(locs));
-  };
-
-  const handleSaveLocation = async () => {
-    const alreadySaved = savedLocations.some(
-      l => l.lat === location.lat && l.lng === location.lng
-    );
-    if (alreadySaved) return;
-
-    if (user) {
-      const { data, error } = await createClient()
-        .from('saved_locations')
-        .insert({ user_id: user.id, name: locationName, lat: location.lat, lng: location.lng })
-        .select('id')
-        .single();
-
-      if (!error && data) {
-        const newLoc: SavedLocation = { id: data.id, name: locationName, lat: location.lat, lng: location.lng };
-        setSavedLocations(prev => {
-          const updated = [...prev, newLoc];
-          persistSavedLocations(updated);
-          return updated;
-        });
-      }
-    } else {
-      const newLoc: SavedLocation = { name: locationName, lat: location.lat, lng: location.lng };
-      setSavedLocations(prev => {
-        const updated = [...prev, newLoc];
-        persistSavedLocations(updated);
-        return updated;
-      });
-    }
-  };
-
-  const handleRemoveSavedLocation = async (index: number) => {
-    const loc = savedLocations[index];
-
-    if (user && loc.id) {
-      await createClient().from('saved_locations').delete().eq('id', loc.id);
-    }
-
-    setSavedLocations(prev => {
-      const updated = prev.filter((_, i) => i !== index);
-      persistSavedLocations(updated);
-      return updated;
-    });
-  };
-
-  const isLocationSaved = savedLocations.some(
-    l => l.lat === location.lat && l.lng === location.lng
-  );
-
-  // ── Load from DB on login / revert to localStorage on logout ───────────────
-
+  // Surface OAuth errors passed back via ?error=auth
   useEffect(() => {
-    const prevId = prevUserIdRef.current;
-    const currId = user?.id ?? null;
-
-    // Skip the very first render (undefined → whatever)
-    if (prevId === undefined) {
-      prevUserIdRef.current = currId;
-      return;
-    }
-
-    prevUserIdRef.current = currId;
-
-    if (currId && currId !== prevId) {
-      // User just logged in — fetch their DB data
-      (async () => {
-        const db = createClient();
-        const [prefsResult, locsResult] = await Promise.all([
-          db.from('user_preferences').select('unit, wind_unit').eq('user_id', currId).single(),
-          db.from('saved_locations').select('id, name, lat, lng').eq('user_id', currId).order('created_at'),
-        ]);
-
-        if (prefsResult.data) {
-          applyPreferences(
-            prefsResult.data.unit as 'C' | 'F',
-            prefsResult.data.wind_unit as 'km' | 'mi'
-          );
-        }
-
-        if (locsResult.data) {
-          const locs: SavedLocation[] = locsResult.data.map(r => ({
-            id: r.id,
-            name: r.name,
-            lat: r.lat,
-            lng: r.lng,
-          }));
-          setSavedLocations(locs);
-          persistSavedLocations(locs);
-        }
-      })();
-    } else if (!currId && prevId) {
-      // User just logged out — fall back to localStorage
-      const savedUnit = localStorage.getItem('weatherUnit');
-      if (savedUnit === 'C' || savedUnit === 'F') setUnit(savedUnit);
-
-      const savedWindUnit = localStorage.getItem('weatherWindUnit');
-      if (savedWindUnit === 'km' || savedWindUnit === 'mi') setWindUnit(savedWindUnit);
-
-      const savedLocs = localStorage.getItem('savedLocations');
-      if (savedLocs) {
-        try { setSavedLocations(JSON.parse(savedLocs)); } catch { /* ignore */ }
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // ── Bootstrap on mount (localStorage only — DB load happens via user effect) ─
-
-  useEffect(() => {
-    const savedUnit = localStorage.getItem('weatherUnit');
-    if (savedUnit === 'C' || savedUnit === 'F') setUnit(savedUnit);
-
-    const savedWindUnit = localStorage.getItem('weatherWindUnit');
-    if (savedWindUnit === 'km' || savedWindUnit === 'mi') setWindUnit(savedWindUnit);
-
-    const savedLocs = localStorage.getItem('savedLocations');
-    if (savedLocs) {
-      try { setSavedLocations(JSON.parse(savedLocs)); } catch { /* ignore */ }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'auth') {
+      setAuthError('Sign-in failed. Please try again.');
+      window.history.replaceState({}, '', '/');
     }
   }, []);
-
-  // ── Weather data ───────────────────────────────────────────────────────────
 
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
     setIsGeocoding(true);
@@ -220,28 +61,7 @@ export default function Page() {
     }
   }, []);
 
-  const fetchWeatherData = useCallback(async (loc: Location, date: string, hour: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(
-        `/api/weather?latitude=${loc.lat}&longitude=${loc.lng}&start_date=${date}&end_date=${date}`
-      );
-      if (!response.ok) throw new Error('Failed to fetch weather data');
-
-      const data = await response.json();
-      if (!data.hourly?.time) throw new Error('No data available for this date');
-
-      setWeatherData(parseWeatherResponse(data, hour));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      setWeatherData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // On mount: try geolocation, fall back to default London
+  // On mount: try geolocation, fall back to London
   useEffect(() => {
     getCurrentPosition(
       (lat, lng) => {
@@ -276,10 +96,6 @@ export default function Page() {
     });
   };
 
-  const handleRetry = () => {
-    fetchWeatherData(location, selectedDate, selectedHour);
-  };
-
   const handlePrevDay = () => {
     setSelectedDate(format(subDays(parseISO(selectedDate), 1), 'yyyy-MM-dd'));
   };
@@ -297,9 +113,32 @@ export default function Page() {
     addDays(startOfDay(subDays(new Date(), 1)), 1)
   );
 
+  const locationSaved = isLocationSaved(location.lat, location.lng);
+
   return (
     <div className="min-h-screen bg-zinc-50 font-sans text-zinc-900 flex flex-col items-center py-12 px-4">
       <div className="w-full max-w-4xl space-y-12">
+
+        {/* Auth error banner */}
+        {authError && (
+          <div className="flex items-center justify-between gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700">
+            <span>{authError}</span>
+            <button onClick={() => setAuthError(null)} className="text-red-400 hover:text-red-600 shrink-0">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Location error banner */}
+        {locationError && (
+          <div className="flex items-center justify-between gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700">
+            <span>{locationError}</span>
+            <button onClick={() => {}} className="text-red-400 hover:text-red-600 shrink-0">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         <header className="space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex flex-col items-start space-y-1">
@@ -319,7 +158,7 @@ export default function Page() {
           <div className="flex flex-wrap gap-3 pt-2">
             <div className="bg-zinc-100 p-1 rounded-xl inline-flex">
               <button
-                onClick={() => handleSetUnit('C')}
+                onClick={() => setUnit('C')}
                 className={cn(
                   "px-4 py-1.5 text-xs font-bold rounded-lg transition-all",
                   unit === 'C' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
@@ -328,7 +167,7 @@ export default function Page() {
                 Celsius
               </button>
               <button
-                onClick={() => handleSetUnit('F')}
+                onClick={() => setUnit('F')}
                 className={cn(
                   "px-4 py-1.5 text-xs font-bold rounded-lg transition-all",
                   unit === 'F' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
@@ -339,7 +178,7 @@ export default function Page() {
             </div>
             <div className="bg-zinc-100 p-1 rounded-xl inline-flex">
               <button
-                onClick={() => handleSetWindUnit('km')}
+                onClick={() => setWindUnit('km')}
                 className={cn(
                   "px-6 py-1.5 text-xs font-bold rounded-lg transition-all",
                   windUnit === 'km' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
@@ -348,7 +187,7 @@ export default function Page() {
                 km/h
               </button>
               <button
-                onClick={() => handleSetWindUnit('mi')}
+                onClick={() => setWindUnit('mi')}
                 className={cn(
                   "px-6 py-1.5 text-xs font-bold rounded-lg transition-all",
                   windUnit === 'mi' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
@@ -378,17 +217,17 @@ export default function Page() {
                     />
                   </div>
                   <button
-                    onClick={handleSaveLocation}
-                    disabled={isLocationSaved}
-                    title={isLocationSaved ? 'Location saved' : 'Save location'}
+                    onClick={() => saveLocation(location, locationName).catch(console.error)}
+                    disabled={locationSaved}
+                    title={locationSaved ? 'Location saved' : 'Save location'}
                     className={cn(
                       "p-4 rounded-2xl transition-all active:scale-95 shadow-md shrink-0",
-                      isLocationSaved
+                      locationSaved
                         ? "bg-zinc-100 text-zinc-400 cursor-default"
                         : "bg-zinc-900 text-white hover:bg-zinc-800"
                     )}
                   >
-                    {isLocationSaved
+                    {locationSaved
                       ? <Bookmark className="w-5 h-5" />
                       : <BookmarkPlus className="w-5 h-5" />
                     }
@@ -404,11 +243,10 @@ export default function Page() {
                 </div>
               </div>
 
-              {/* Saved Locations */}
               <SavedLocations
                 saved={savedLocations}
                 onSelect={handleLocationChange}
-                onRemove={handleRemoveSavedLocation}
+                onRemove={(i) => removeLocation(i).catch(console.error)}
               />
 
               <div className="grid grid-cols-1 gap-6">
@@ -474,10 +312,10 @@ export default function Page() {
             <WeatherDisplay
               data={weatherData}
               loading={loading}
-              error={error}
+              error={weatherError}
               unit={unit}
               windUnit={windUnit}
-              onRetry={handleRetry}
+              onRetry={() => fetchWeatherData(location, selectedDate, selectedHour)}
             />
           </div>
         </div>

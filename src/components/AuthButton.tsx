@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -13,11 +14,12 @@ const AuthButton: React.FC = () => {
     return (
       <div className="flex items-center gap-3">
         {user.user_metadata?.avatar_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={user.user_metadata.avatar_url}
             alt={user.user_metadata?.full_name || 'User avatar'}
-            className="w-8 h-8 rounded-full ring-2 ring-zinc-200"
+            width={32}
+            height={32}
+            className="rounded-full ring-2 ring-zinc-200"
           />
         )}
         <span className="text-xs font-semibold text-zinc-500 hidden sm:block truncate max-w-[10rem]">
