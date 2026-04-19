@@ -5,8 +5,12 @@ import Image from 'next/image';
 import { LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
+const googleAuthEnabled = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === 'true';
+
 const AuthButton: React.FC = () => {
   const { user, loading, signInWithGoogle, signOut } = useAuth();
+
+  if (!googleAuthEnabled) return null;
 
   if (loading) return <div className="w-32 h-8 bg-zinc-100 rounded-xl animate-pulse" />;
 
