@@ -33,7 +33,11 @@ export function useSavedLocations(user: User | null) {
         .select('id, name, lat, lng')
         .eq('user_id', user.id)
         .order('created_at')
-        .then(({ data }) => {
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Failed to load saved locations from DB:', error.message);
+            return;
+          }
           if (data) {
             const locs: SavedLocation[] = data.map(r => ({
               id: r.id as string,
@@ -111,5 +115,7 @@ export function useSavedLocations(user: User | null) {
   const isLocationSaved = (lat: number, lng: number) =>
     savedLocations.some(l => l.lat === lat && l.lng === lng);
 
-  return { savedLocations, locationError, saveLocation, removeLocation, isLocationSaved };
+  const clearLocationError = () => setLocationError(null);
+
+  return { savedLocations, locationError, clearLocationError, saveLocation, removeLocation, isLocationSaved };
 }

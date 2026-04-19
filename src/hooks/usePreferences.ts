@@ -39,7 +39,11 @@ export function usePreferences(user: User | null) {
         .select('unit, wind_unit')
         .eq('user_id', user.id)
         .single()
-        .then(({ data }) => {
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Failed to load preferences from DB:', error.message);
+            return;
+          }
           if (data) {
             const u = data.unit as TempUnit;
             const w = data.wind_unit as WindUnit;

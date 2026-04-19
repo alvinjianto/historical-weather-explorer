@@ -29,7 +29,7 @@ export default function Page() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const { unit, windUnit, setUnit, setWindUnit } = usePreferences(user);
-  const { savedLocations, locationError, saveLocation, removeLocation, isLocationSaved } = useSavedLocations(user);
+  const { savedLocations, locationError, clearLocationError, saveLocation, removeLocation, isLocationSaved } = useSavedLocations(user);
   const { weatherData, loading, error: weatherError, fetchWeatherData } = useWeatherData();
   const { isLocating, getCurrentPosition } = useGeolocation();
 
@@ -133,7 +133,7 @@ export default function Page() {
         {locationError && (
           <div className="flex items-center justify-between gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700">
             <span>{locationError}</span>
-            <button onClick={() => {}} className="text-red-400 hover:text-red-600 shrink-0">
+            <button onClick={clearLocationError} className="text-red-400 hover:text-red-600 shrink-0">
               <X className="w-4 h-4" />
             </button>
           </div>

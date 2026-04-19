@@ -3,6 +3,10 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
+  if (process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED !== 'true') {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
   const next = searchParams.get('next') ?? '/';
