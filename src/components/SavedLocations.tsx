@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { Bookmark, X } from 'lucide-react';
-import { Location } from '@/types/weather';
-import { SavedLocation } from '@/app/page';
+import { Location, SavedLocation } from '@/types/weather';
 
 interface SavedLocationsProps {
   saved: SavedLocation[];
@@ -22,7 +21,7 @@ const SavedLocations: React.FC<SavedLocationsProps> = ({ saved, onSelect, onRemo
       <div className="flex flex-wrap gap-2">
         {saved.map((loc, i) => (
           <div
-            key={i}
+            key={loc.id ?? `${loc.name}-${loc.lat}-${loc.lng}`}
             className="flex items-center bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 gap-2 hover:border-zinc-300 transition-colors"
           >
             <button
