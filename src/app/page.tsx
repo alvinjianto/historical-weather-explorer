@@ -199,125 +199,125 @@ export default function Page() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Controls Panel */}
-          <div className="lg:col-span-5 space-y-8 bg-white p-8 rounded-3xl shadow-sm border border-zinc-200">
-            <div className="space-y-6">
-              {/* Location */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center">
-                  <MapPin className="w-3.5 h-3.5 mr-2" /> Current Location
-                </label>
-                <div className="flex items-center space-x-2">
-                  <div className="flex-1">
-                    <SearchComponent
-                      onLocationSelect={handleLocationChange}
-                      currentValue={locationName}
-                      isGeocoding={isGeocoding}
-                    />
-                  </div>
-                  <button
-                    onClick={() => saveLocation(location, locationName).catch(console.error)}
-                    disabled={locationSaved}
-                    title={locationSaved ? 'Location saved' : 'Save location'}
-                    className={cn(
-                      "p-4 rounded-2xl transition-all active:scale-95 shadow-md shrink-0",
-                      locationSaved
-                        ? "bg-zinc-100 text-zinc-400 cursor-default"
-                        : "bg-zinc-900 text-white hover:bg-zinc-800"
-                    )}
-                  >
-                    {locationSaved
-                      ? <Bookmark className="w-5 h-5" />
-                      : <BookmarkPlus className="w-5 h-5" />
-                    }
-                  </button>
-                  <button
-                    onClick={handleCurrentLocation}
-                    disabled={isLocating}
-                    title="Use my location"
-                    className="p-4 bg-zinc-900 text-white rounded-2xl hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50 shadow-md shrink-0"
-                  >
-                    <Navigation className={cn("w-5 h-5", isLocating && "animate-pulse")} />
-                  </button>
+        {/* Controls Panel */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Location */}
+            <div className="space-y-3">
+              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center">
+                <MapPin className="w-3.5 h-3.5 mr-2" /> Current Location
+              </label>
+              <div className="flex items-center space-x-2">
+                <div className="flex-1">
+                  <SearchComponent
+                    onLocationSelect={handleLocationChange}
+                    currentValue={locationName}
+                    isGeocoding={isGeocoding}
+                  />
                 </div>
+                <button
+                  onClick={() => saveLocation(location, locationName).catch(console.error)}
+                  disabled={locationSaved}
+                  title={locationSaved ? 'Location saved' : 'Save location'}
+                  className={cn(
+                    "p-4 rounded-2xl transition-all active:scale-95 shadow-md shrink-0",
+                    locationSaved
+                      ? "bg-zinc-100 text-zinc-400 cursor-default"
+                      : "bg-zinc-900 text-white hover:bg-zinc-800"
+                  )}
+                >
+                  {locationSaved
+                    ? <Bookmark className="w-5 h-5" />
+                    : <BookmarkPlus className="w-5 h-5" />
+                  }
+                </button>
+                <button
+                  onClick={handleCurrentLocation}
+                  disabled={isLocating}
+                  title="Use my location"
+                  className="p-4 bg-zinc-900 text-white rounded-2xl hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50 shadow-md shrink-0"
+                >
+                  <Navigation className={cn("w-5 h-5", isLocating && "animate-pulse")} />
+                </button>
               </div>
+            </div>
 
+            {/* Date */}
+            <div className="space-y-3">
+              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center">
+                <Calendar className="w-3.5 h-3.5 mr-2" /> Date
+              </label>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handlePrevDay}
+                  className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl hover:bg-zinc-100 transition-all text-zinc-500"
+                  title="Previous Day"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="relative flex-1">
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    max={format(subDays(new Date(), 1), 'yyyy-MM-dd')}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all shadow-inner cursor-pointer appearance-none"
+                  />
+                </div>
+                <button
+                  onClick={handleNextDay}
+                  disabled={isNextDayDisabled}
+                  className={cn(
+                    "p-3 bg-zinc-50 border border-zinc-200 rounded-xl transition-all text-zinc-500",
+                    isNextDayDisabled ? "opacity-30 cursor-not-allowed" : "hover:bg-zinc-100"
+                  )}
+                  title="Next Day"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Hour */}
+            <div className="space-y-3">
+              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center">
+                <Clock className="w-3.5 h-3.5 mr-2" /> Hour
+              </label>
+              <select
+                value={selectedHour}
+                onChange={(e) => setSelectedHour(parseInt(e.target.value))}
+                className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all shadow-inner cursor-pointer appearance-none"
+              >
+                {[...Array(24)].map((_, i) => (
+                  <option key={i} value={i}>
+                    {i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {savedLocations.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-zinc-100">
               <SavedLocations
                 saved={savedLocations}
                 onSelect={handleLocationChange}
                 onRemove={(i) => removeLocation(i).catch(console.error)}
               />
-
-              <div className="grid grid-cols-1 gap-6">
-                {/* Date */}
-                <div className="space-y-3">
-                  <label className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center">
-                    <Calendar className="w-3.5 h-3.5 mr-2" /> Date
-                  </label>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={handlePrevDay}
-                      className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl hover:bg-zinc-100 transition-all text-zinc-500"
-                      title="Previous Day"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <div className="relative flex-1">
-                      <input
-                        type="date"
-                        value={selectedDate}
-                        max={format(subDays(new Date(), 1), 'yyyy-MM-dd')}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all shadow-inner cursor-pointer appearance-none"
-                      />
-                    </div>
-                    <button
-                      onClick={handleNextDay}
-                      disabled={isNextDayDisabled}
-                      className={cn(
-                        "p-3 bg-zinc-50 border border-zinc-200 rounded-xl transition-all text-zinc-500",
-                        isNextDayDisabled ? "opacity-30 cursor-not-allowed" : "hover:bg-zinc-100"
-                      )}
-                      title="Next Day"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Hour */}
-                <div className="space-y-3">
-                  <label className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center">
-                    <Clock className="w-3.5 h-3.5 mr-2" /> Hour
-                  </label>
-                  <select
-                    value={selectedHour}
-                    onChange={(e) => setSelectedHour(parseInt(e.target.value))}
-                    className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all shadow-inner cursor-pointer appearance-none"
-                  >
-                    {[...Array(24)].map((_, i) => (
-                      <option key={i} value={i}>
-                        {i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* Results Display */}
-          <div className="lg:col-span-7">
-            <WeatherDisplay
-              data={weatherData}
-              loading={loading}
-              error={weatherError}
-              unit={unit}
-              windUnit={windUnit}
-              onRetry={() => fetchWeatherData(location, selectedDate, selectedHour)}
-            />
-          </div>
+        {/* Results Display */}
+        <div>
+          <WeatherDisplay
+            data={weatherData}
+            loading={loading}
+            error={weatherError}
+            unit={unit}
+            windUnit={windUnit}
+            onRetry={() => fetchWeatherData(location, selectedDate, selectedHour)}
+          />
         </div>
 
         <footer className="pt-12 border-t border-zinc-200 text-center">
