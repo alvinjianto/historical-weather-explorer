@@ -12,6 +12,8 @@ dist/
 
 # Testing
 coverage/
+test-results/
+playwright-report/
 
 # Environment variables
 .env*
@@ -31,6 +33,9 @@ yarn-error.log*
 # Editor
 .vscode/
 .idea/
+
+# Supabase
+supabase/snippets/
 
 # Local tooling
 .claude/
