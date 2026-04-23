@@ -23,7 +23,7 @@ export default function Page() {
 
   const [location, setLocation] = useState<Location>(DEFAULT_LOCATION);
   const [locationName, setLocationName] = useState<string>(DEFAULT_LOCATION_NAME);
-  const [selectedDate, setSelectedDate] = useState<string>(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
+  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedHour, setSelectedHour] = useState<number>(new Date().getHours());
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -102,15 +102,14 @@ export default function Page() {
 
   const handleNextDay = () => {
     const nextDate = addDays(parseISO(selectedDate), 1);
-    const maxDate = subDays(new Date(), 1);
-    if (isBefore(startOfDay(nextDate), addDays(startOfDay(maxDate), 1))) {
+    if (!isBefore(startOfDay(new Date()), startOfDay(nextDate))) {
       setSelectedDate(format(nextDate, 'yyyy-MM-dd'));
     }
   };
 
   const isNextDayDisabled = !isBefore(
     startOfDay(addDays(parseISO(selectedDate), 1)),
-    addDays(startOfDay(subDays(new Date(), 1)), 1)
+    addDays(startOfDay(new Date()), 1)
   );
 
   const locationSaved = isLocationSaved(location.lat, location.lng);
@@ -139,14 +138,14 @@ export default function Page() {
           </div>
         )}
 
-        <header className="space-y-4">
+        <header className="space-y-12">
           <div className="flex items-start justify-between">
-            <div className="flex flex-col items-start space-y-1">
+            <div className="flex flex-col items-start space-y-1 flex-1 min-w-0 pr-6">
               <div className="inline-flex items-center justify-center p-3 bg-zinc-900 rounded-2xl shadow-lg">
                 <Clock className="text-white w-8 h-8" />
               </div>
               <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">WeatherHistory</h1>
-              <p className="text-zinc-500 text-base max-w-xl">
+              <p className="text-zinc-500 text-base">
                 Discover precise atmospheric conditions from any point in time, anywhere in the world.
               </p>
             </div>
@@ -155,7 +154,7 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 pt-2">
+          <div className="flex flex-wrap gap-3 justify-center">
             <div className="bg-zinc-100 p-1 rounded-xl inline-flex">
               <button
                 onClick={() => setUnit('C')}
@@ -201,7 +200,7 @@ export default function Page() {
 
         {/* Controls Panel */}
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_7rem] gap-6">
             {/* Location */}
             <div className="space-y-3">
               <label className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center">
@@ -250,16 +249,16 @@ export default function Page() {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={handlePrevDay}
-                  className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl hover:bg-zinc-100 transition-all text-zinc-500"
+                  className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl hover:bg-zinc-100 transition-all text-zinc-500"
                   title="Previous Day"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
                 <div className="relative flex-1">
                   <input
                     type="date"
                     value={selectedDate}
-                    max={format(subDays(new Date(), 1), 'yyyy-MM-dd')}
+                    max={format(new Date(), 'yyyy-MM-dd')}
                     onChange={(e) => setSelectedDate(e.target.value)}
                     className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all shadow-inner cursor-pointer appearance-none"
                   />
@@ -268,12 +267,12 @@ export default function Page() {
                   onClick={handleNextDay}
                   disabled={isNextDayDisabled}
                   className={cn(
-                    "p-3 bg-zinc-50 border border-zinc-200 rounded-xl transition-all text-zinc-500",
+                    "p-4 bg-zinc-50 border border-zinc-200 rounded-2xl transition-all text-zinc-500",
                     isNextDayDisabled ? "opacity-30 cursor-not-allowed" : "hover:bg-zinc-100"
                   )}
                   title="Next Day"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -316,6 +315,7 @@ export default function Page() {
             error={weatherError}
             unit={unit}
             windUnit={windUnit}
+            locationName={locationName}
             onRetry={() => fetchWeatherData(location, selectedDate, selectedHour)}
           />
         </div>
