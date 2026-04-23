@@ -22,5 +22,10 @@
   - `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true`
 - [ ] If a custom domain is set up, update authorized JavaScript origins and redirect URIs in Google Cloud Console and Supabase
 
+## Auth
+- [ ] Add additional sign-in methods (magic link, email/password, GitHub, Apple, etc.)
+  - Supabase supports all of these with minimal config — just toggle in dashboard and add UI in AuthButton.tsx
+  - Magic link and email/password require an SMTP provider in production (e.g. Resend or SendGrid)
+
 ## Features
 - [ ] Add file storage (Supabase Storage / S3)
