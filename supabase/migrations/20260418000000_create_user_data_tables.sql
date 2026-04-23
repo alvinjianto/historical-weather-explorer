@@ -10,15 +10,15 @@ alter table public.user_preferences enable row level security;
 
 create policy "Users can read their own preferences"
   on public.user_preferences for select
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 create policy "Users can insert their own preferences"
   on public.user_preferences for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 create policy "Users can update their own preferences"
   on public.user_preferences for update
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 -- Saved locations: bookmarked locations per user
 create table public.saved_locations (
@@ -34,12 +34,12 @@ alter table public.saved_locations enable row level security;
 
 create policy "Users can read their own saved locations"
   on public.saved_locations for select
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 create policy "Users can insert their own saved locations"
   on public.saved_locations for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 create policy "Users can delete their own saved locations"
   on public.saved_locations for delete
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
