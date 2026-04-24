@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AlertCircle, CloudSun, Clock, Droplets, Wind, CloudRain } from 'lucide-react';
+import { AlertCircle, CloudSun, Clock, Droplets, Wind, CloudRain, MapPin } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { motion } from 'motion/react';
 import { WeatherData } from '@/types/weather';
@@ -17,10 +17,11 @@ interface WeatherDisplayProps {
   error: string | null;
   unit: 'C' | 'F';
   windUnit: 'km' | 'mi';
+  locationName?: string;
   onRetry?: () => void;
 }
 
-const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ data, loading, error, unit, windUnit, onRetry }) => {
+const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ data, loading, error, unit, windUnit, locationName, onRetry }) => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-[400px] space-y-6 bg-white rounded-[2.5rem] border border-zinc-200 shadow-sm animate-pulse">
@@ -85,6 +86,12 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ data, loading, error, u
           <div className="inline-flex items-center px-3 py-1 bg-zinc-100 rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">
             Historical Snapshot
           </div>
+          {locationName && (
+            <p className="text-lg font-semibold text-zinc-700 flex items-center gap-1.5 mb-1">
+              <MapPin className="w-4 h-4 text-zinc-400 shrink-0" />
+              {locationName}
+            </p>
+          )}
           <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">
             {format(parseISO(data.time), 'MMMM do, yyyy')}
           </h2>

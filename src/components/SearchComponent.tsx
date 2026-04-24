@@ -84,7 +84,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onLocationSelect, cur
           onFocus={() => setIsFocused(true)}
           placeholder="Search city..."
           className={cn(
-            "w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-10 pr-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all shadow-inner",
+            "w-full bg-zinc-50 border border-zinc-200 rounded-2xl pl-10 pr-4 py-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all shadow-inner",
             !isFocused && "text-zinc-700 truncate cursor-pointer",
             isGeocoding && "text-zinc-400 italic"
           )}
