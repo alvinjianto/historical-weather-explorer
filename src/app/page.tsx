@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { format, subDays, addDays, parseISO, isBefore, startOfDay } from 'date-fns';
 import { MapPin, Calendar, Clock, Navigation, ChevronLeft, ChevronRight, Bookmark, BookmarkPlus, X } from 'lucide-react';
 import WeatherDisplay from '@/components/WeatherDisplay';
+import DiaryPanel from '@/components/DiaryPanel';
 import SearchComponent from '@/components/SearchComponent';
 import SavedLocations from '@/components/SavedLocations';
 import AuthButton from '@/components/AuthButton';
@@ -319,6 +320,14 @@ export default function Page() {
             onRetry={() => fetchWeatherData(location, selectedDate, selectedHour)}
           />
         </div>
+
+        {/* Diary — only for authenticated users */}
+        {user && (
+          <DiaryPanel
+            date={selectedDate}
+            location={{ ...location, name: locationName }}
+          />
+        )}
 
         <footer className="pt-12 border-t border-zinc-200 text-center">
           <p className="text-zinc-400 text-sm">
