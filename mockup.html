@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Layout Mockup – Side-by-side (desktop) + Tabs (mobile)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f4f5; color: #18181b; }
+
+  h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #a1a1aa; margin-bottom: 12px; }
+
+  .section { padding: 40px; }
+  .section + .section { border-top: 1px solid #e4e4e7; }
+
+  /* ── Shared card ── */
+  .card { background: #fff; border: 1px solid #e4e4e7; border-radius: 20px; padding: 16px; }
+
+  /* ── Controls bar ── */
+  .controls { background:#fff; border:1px solid #e4e4e7; border-radius:20px; padding:16px 20px; display:flex; gap:16px; align-items:center; }
+  .ctrl-group { display:flex; flex-direction:column; gap:6px; flex:1; }
+  .ctrl-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#a1a1aa; }
+  .ctrl-input { background:#f4f4f5; border:1px solid #e4e4e7; border-radius:12px; padding:8px 12px; font-size:13px; color:#3f3f46; }
+  .ctrl-input.narrow { width:80px; }
+
+  /* ── Weather panel ── */
+  .weather-hero { background:#18181b; border-radius:16px; padding:20px; color:#fff; margin-bottom:12px; }
+  .weather-hero .temp { font-size:48px; font-weight:800; line-height:1; }
+  .weather-hero .meta { font-size:13px; color:#a1a1aa; margin-top:4px; }
+  .weather-hero .condition { font-size:14px; color:#d4d4d8; margin-top:8px; }
+  .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .stat { background:#f4f4f5; border-radius:12px; padding:10px 12px; }
+  .stat .label { font-size:10px; color:#a1a1aa; font-weight:600; text-transform:uppercase; letter-spacing:.06em; }
+  .stat .value { font-size:16px; font-weight:700; margin-top:2px; }
+  .hourly { display:flex; gap:6px; overflow:hidden; margin-top:8px; }
+  .hour-item { background:#f4f4f5; border-radius:10px; padding:8px; text-align:center; min-width:48px; flex-shrink:0; }
+  .hour-item .time { font-size:9px; color:#a1a1aa; font-weight:600; }
+  .hour-item .tmp { font-size:13px; font-weight:700; margin-top:2px; }
+
+  /* ── Diary panel ── */
+  .diary-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .diary-icon { background:#18181b; border-radius:10px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; }
+  .diary-icon svg { width:16px; height:16px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .diary-title { font-size:14px; font-weight:700; }
+  .diary-loc { font-size:11px; color:#a1a1aa; }
+  textarea.diary-input { width:100%; min-height:100px; background:#f4f4f5; border:1px solid #e4e4e7; border-radius:14px; padding:12px; font-size:13px; color:#3f3f46; resize:none; font-family:inherit; outline:none; }
+  .save-status { font-size:11px; color:#22c55e; text-align:right; margin-top:4px; }
+  .photo-drop { border:2px dashed #e4e4e7; border-radius:14px; padding:16px; text-align:center; background:#fafafa; margin-top:12px; }
+  .photo-drop p { font-size:12px; color:#a1a1aa; margin-top:4px; }
+  .photo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px; }
+  .photo-thumb { background:#e4e4e7; border-radius:10px; aspect-ratio:1; }
+  .photo-thumb.filled { background: linear-gradient(135deg,#d4d4d8,#a1a1aa); }
+
+  /* ── Tabs ── */
+  .tab-bar { display:flex; background:#f4f4f5; border-radius:14px; padding:3px; gap:2px; margin-bottom:14px; }
+  .tab { flex:1; text-align:center; padding:8px; border-radius:11px; font-size:12px; font-weight:700; color:#a1a1aa; cursor:pointer; }
+  .tab.active { background:#fff; color:#18181b; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+
+  /* ── Desktop mockup ── */
+  .desktop-frame { background:#f4f4f5; border-radius:16px; padding:24px; border:1px solid #e4e4e7; max-width:960px; }
+  .desktop-frame .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; }
+  .desktop-frame .page-header h1 { font-size:28px; font-weight:800; }
+  .desktop-frame .page-header p { font-size:13px; color:#a1a1aa; margin-top:2px; }
+  .avatar { width:36px; height:36px; border-radius:50%; background:#18181b; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px; font-weight:700; }
+  .two-col { display:grid; grid-template-columns:1.1fr .9fr; gap:16px; margin-top:16px; }
+  .sticky-note { font-size:10px; color:#a1a1aa; text-align:center; margin-top:6px; font-style:italic; }
+
+  /* ── Mobile mockup ── */
+  .mobile-frame { width:320px; background:#f4f4f5; border-radius:32px; padding:20px 16px; border:2px solid #d4d4d8; box-shadow:0 8px 32px rgba(0,0,0,.1); position:relative; }
+  .mobile-frame::before { content:''; display:block; width:80px; height:5px; background:#d4d4d8; border-radius:3px; margin:0 auto 16px; }
+  .mobile-frame .page-header { margin-bottom:14px; }
+  .mobile-frame .page-header h1 { font-size:20px; font-weight:800; }
+  .mobile-frame .page-header p { font-size:11px; color:#a1a1aa; }
+
+  .frames-row { display:flex; gap:48px; align-items:flex-start; flex-wrap:wrap; }
+  .frame-label { font-size:12px; font-weight:700; color:#71717a; margin-bottom:10px; text-align:center; }
+</style>
+</head>
+<body>
+
+<div class="section">
+  <h2>Recommended layout — Side-by-side on desktop · Tabs on mobile</h2>
+
+  <div class="frames-row">
+
+    <!-- DESKTOP -->
+    <div>
+      <div class="frame-label">Desktop (≥ 1024px)</div>
+      <div class="desktop-frame">
+
+        <div class="page-header">
+          <div>
+            <h1>WeatherHistory</h1>
+            <p>Discover precise atmospheric conditions from any point in time.</p>
+          </div>
+          <div class="avatar">A</div>
+        </div>
+
+        <div class="controls">
+          <div class="ctrl-group">
+            <span class="ctrl-label">📍 Location</span>
+            <div class="ctrl-input">London, United Kingdom</div>
+          </div>
+          <div class="ctrl-group">
+            <span class="ctrl-label">📅 Date</span>
+            <div class="ctrl-input">2025-04-25</div>
+          </div>
+          <div class="ctrl-group" style="flex:0">
+            <span class="ctrl-label">🕐 Hour</span>
+            <div class="ctrl-input narrow">3 PM</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+
+          <!-- Left: Weather -->
+          <div>
+            <div class="weather-hero">
+              <div class="temp">14°C</div>
+              <div class="meta">London · Fri 25 Apr 2025 · 3 PM</div>
+              <div class="condition">⛅ Partly Cloudy</div>
+            </div>
+            <div class="stats-grid">
+              <div class="stat"><div class="label">Feels like</div><div class="value">12°C</div></div>
+              <div class="stat"><div class="label">Humidity</div><div class="value">67%</div></div>
+              <div class="stat"><div class="label">Wind</div><div class="value">18 km/h</div></div>
+              <div class="stat"><div class="label">Precip.</div><div class="value">0.2 mm</div></div>
+            </div>
+            <div class="hourly" style="margin-top:10px;">
+              <div class="hour-item"><div class="time">12PM</div><div class="tmp">13°</div></div>
+              <div class="hour-item"><div class="time">1PM</div><div class="tmp">14°</div></div>
+              <div class="hour-item" style="background:#18181b;color:#fff"><div class="time" style="color:#a1a1aa">3PM</div><div class="tmp">14°</div></div>
+              <div class="hour-item"><div class="time">4PM</div><div class="tmp">13°</div></div>
+              <div class="hour-item"><div class="time">5PM</div><div class="tmp">12°</div></div>
+              <div class="hour-item"><div class="time">6PM</div><div class="tmp">11°</div></div>
+            </div>
+          </div>
+
+          <!-- Right: Diary -->
+          <div style="position:sticky;top:24px;">
+            <div class="card">
+              <div class="diary-header">
+                <div class="diary-icon">
+                  <svg viewBox="0 0 24 24"><path d="M2 6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/><path d="M8 2v4M16 2v4M2 10h20"/></svg>
+                </div>
+                <div>
+                  <div class="diary-title">Daily Diary</div>
+                  <div class="diary-loc">📍 London, United Kingdom</div>
+                </div>
+              </div>
+              <textarea class="diary-input">A cool, cloudy afternoon in London. Took a walk along the Thames — the city feels quiet today. Perfect weather for a coat and coffee.</textarea>
+              <div class="save-status">✓ Saved</div>
+              <div class="photo-grid">
+                <div class="photo-thumb filled"></div>
+                <div class="photo-thumb filled"></div>
+                <div class="photo-thumb"></div>
+              </div>
+              <div class="photo-drop" style="margin-top:8px;">
+                <div style="font-size:20px;">🖼️</div>
+                <p>Drop a photo or click to browse</p>
+              </div>
+            </div>
+            <div class="sticky-note">Diary stays in view as you scroll weather details ↑</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- MOBILE -->
+    <div>
+      <div class="frame-label">Mobile (&lt; 1024px) — Weather tab</div>
+      <div class="mobile-frame">
+        <div class="page-header">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div><h1>WeatherHistory</h1><p>Historical weather, anywhere.</p></div>
+            <div class="avatar" style="width:28px;height:28px;font-size:11px;">A</div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:12px;margin-bottom:10px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div class="ctrl-input" style="flex:1;font-size:12px;padding:7px 10px;">London, UK</div>
+            <div class="ctrl-input" style="font-size:12px;padding:7px 10px;">Apr 25</div>
+            <div class="ctrl-input" style="font-size:12px;padding:7px 10px;">3PM</div>
+          </div>
+        </div>
+
+        <div class="tab-bar">
+          <div class="tab active">⛅ Weather</div>
+          <div class="tab">📖 Diary</div>
+        </div>
+
+        <div class="weather-hero" style="padding:16px;">
+          <div class="temp" style="font-size:36px;">14°C</div>
+          <div class="meta" style="font-size:11px;">London · 3 PM · Partly Cloudy</div>
+        </div>
+        <div class="stats-grid" style="margin-top:8px;">
+          <div class="stat"><div class="label">Feels like</div><div class="value">12°C</div></div>
+          <div class="stat"><div class="label">Humidity</div><div class="value">67%</div></div>
+        </div>
+      </div>
+
+      <!-- Mobile diary tab -->
+      <div style="margin-top:24px;">
+        <div class="frame-label">Mobile — Diary tab</div>
+        <div class="mobile-frame">
+          <div class="page-header">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div><h1>WeatherHistory</h1><p>Historical weather, anywhere.</p></div>
+              <div class="avatar" style="width:28px;height:28px;font-size:11px;">A</div>
+            </div>
+          </div>
+
+          <div class="card" style="padding:12px;margin-bottom:10px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <div class="ctrl-input" style="flex:1;font-size:12px;padding:7px 10px;">London, UK</div>
+              <div class="ctrl-input" style="font-size:12px;padding:7px 10px;">Apr 25</div>
+              <div class="ctrl-input" style="font-size:12px;padding:7px 10px;">3PM</div>
+            </div>
+          </div>
+
+          <div class="tab-bar">
+            <div class="tab">⛅ Weather</div>
+            <div class="tab active">📖 Diary</div>
+          </div>
+
+          <div class="card">
+            <div class="diary-header" style="margin-bottom:10px;">
+              <div class="diary-icon" style="width:28px;height:28px;">
+                <svg viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M2 6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/><path d="M8 2v4M16 2v4M2 10h20"/></svg>
+              </div>
+              <div>
+                <div class="diary-title" style="font-size:13px;">Daily Diary</div>
+                <div class="diary-loc">📍 London, UK · 14°C ⛅</div>
+              </div>
+            </div>
+            <textarea class="diary-input" style="min-height:80px;font-size:12px;">A cool, cloudy afternoon in London…</textarea>
+            <div class="save-status">✓ Saved</div>
+            <div class="photo-grid">
+              <div class="photo-thumb filled"></div>
+              <div class="photo-thumb filled"></div>
+              <div class="photo-thumb"></div>
+            </div>
+            <div class="photo-drop" style="margin-top:8px;padding:12px;">
+              <div style="font-size:16px;">🖼️</div>
+              <p style="font-size:11px;">Tap to add a photo</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

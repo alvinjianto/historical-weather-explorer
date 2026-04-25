@@ -42,6 +42,3 @@ supabase/snippets/
 .claude/
 .agents/
 skills-lock.json
-
-# Local scratch files
-mockup.html
