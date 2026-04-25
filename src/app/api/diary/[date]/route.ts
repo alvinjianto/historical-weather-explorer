@@ -12,6 +12,7 @@ async function buildEntry(
     .from('diary_photos')
     .select('id, storage_path, filename, created_at')
     .eq('diary_entry_id', row.id as string)
+    .is('deleted_at', null)
     .order('created_at');
 
   const photos: DiaryPhoto[] = await Promise.all(
@@ -56,6 +57,7 @@ export async function GET(
     .select('id, date, content, location_name, lat, lng, updated_at')
     .eq('user_id', user.id)
     .eq('date', date)
+    .is('deleted_at', null)
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

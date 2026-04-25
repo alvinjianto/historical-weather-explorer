@@ -45,12 +45,13 @@ export async function POST(
 
   if (entryError) return NextResponse.json({ error: entryError.message }, { status: 500 });
 
-  // Get the entry id (either just created or already existed)
+  // Get the entry id (either just created or already existed, and not soft-deleted)
   const { data: existingEntry } = await supabase
     .from('diary_entries')
     .select('id')
     .eq('user_id', user.id)
     .eq('date', date)
+    .is('deleted_at', null)
     .single();
 
   const entryId = (entryRow ?? existingEntry)?.id as string;

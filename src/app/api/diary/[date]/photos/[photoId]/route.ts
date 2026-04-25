@@ -13,7 +13,7 @@ export async function DELETE(
 
   const { data: photo, error: fetchError } = await supabase
     .from('diary_photos')
-    .select('id, storage_path, user_id')
+    .select('id, user_id, deleted_at')
     .eq('id', photoId)
     .single();
 
@@ -25,14 +25,16 @@ export async function DELETE(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  await supabase.storage.from('diary-photos').remove([photo.storage_path as string]);
+  if (photo.deleted_at) {
+    return NextResponse.json({ error: 'Photo already deleted' }, { status: 410 });
+  }
 
-  const { error: deleteError } = await supabase
+  const { error } = await supabase
     .from('diary_photos')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', photoId);
 
-  if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
 }
