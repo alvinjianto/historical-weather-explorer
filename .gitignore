@@ -9,6 +9,7 @@ out/
 # Build outputs
 build/
 dist/
+tsconfig.tsbuildinfo
 
 # Testing
 coverage/
