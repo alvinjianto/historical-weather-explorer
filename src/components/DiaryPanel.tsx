@@ -67,6 +67,7 @@ export default function DiaryPanel({ date, location }: DiaryPanelProps) {
           ) : (
             <>
               <DiaryEditor
+                key={date}
                 initialContent={entry?.content ?? ''}
                 saveStatus={saveStatus}
                 onChange={saveContent}

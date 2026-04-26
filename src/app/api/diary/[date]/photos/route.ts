@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getAuthenticatedClient } from '@/lib/supabase/server';
 import { validatePhotoFile, buildStoragePath } from '@/lib/diary';
 
 export async function POST(
@@ -7,10 +7,8 @@ export async function POST(
   { params }: { params: Promise<{ date: string }> }
 ) {
   const { date } = await params;
-  const supabase = await createServerSupabaseClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { supabase, user, unauthorized } = await getAuthenticatedClient();
+  if (unauthorized) return unauthorized;
 
   const formData = await request.formData();
   const file = formData.get('file') as File | null;
@@ -25,39 +23,35 @@ export async function POST(
     return NextResponse.json({ error: validation.error }, { status: 422 });
   }
 
-  // Ensure a diary entry exists for this date (upsert with empty content if none)
-  const { data: entryRow, error: entryError } = await supabase
+  // Fetch existing entry, creating one only if needed
+  let { data: existingEntry } = await supabase
     .from('diary_entries')
-    .upsert(
-      {
-        user_id: user.id,
+    .select('id')
+    .eq('user_id', user!.id)
+    .eq('date', date)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (!existingEntry) {
+    const { data: newEntry, error: insertError } = await supabase
+      .from('diary_entries')
+      .insert({
+        user_id: user!.id,
         date,
         content: '',
         location_name: locationName ?? null,
         lat: lat ?? null,
         lng: lng ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,date', ignoreDuplicates: true }
-    )
-    .select('id')
-    .single();
+      })
+      .select('id')
+      .single();
+    if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+    existingEntry = newEntry;
+  }
 
-  if (entryError) return NextResponse.json({ error: entryError.message }, { status: 500 });
+  const entryId = existingEntry!.id as string;
 
-  // Get the entry id (either just created or already existed, and not soft-deleted)
-  const { data: existingEntry } = await supabase
-    .from('diary_entries')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('date', date)
-    .is('deleted_at', null)
-    .single();
-
-  const entryId = (entryRow ?? existingEntry)?.id as string;
-  if (!entryId) return NextResponse.json({ error: 'Failed to resolve diary entry' }, { status: 500 });
-
-  const storagePath = buildStoragePath(user.id, date, file.name);
+  const storagePath = buildStoragePath(user!.id, date, file.name);
   const arrayBuffer = await file.arrayBuffer();
 
   const { error: uploadError } = await supabase.storage
@@ -69,7 +63,7 @@ export async function POST(
   const { data: photoRow, error: photoError } = await supabase
     .from('diary_photos')
     .insert({
-      user_id: user.id,
+      user_id: user!.id,
       diary_entry_id: entryId,
       storage_path: storagePath,
       filename: file.name,

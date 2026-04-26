@@ -20,10 +20,16 @@ const STATUS_LABELS: Record<SaveStatus, string> = {
 export default function DiaryEditor({ initialContent, saveStatus, onChange }: DiaryEditorProps) {
   const [content, setContent] = useState(initialContent);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Only sync initialContent → content before the user has typed anything.
+  // Once the user edits, we stop overwriting their text from prop changes.
+  // The parent keys this component by date so it remounts on date navigation,
+  // resetting this flag for the new day.
+  const userHasEdited = useRef(false);
 
-  // Sync if the entry loads after initial render
   useEffect(() => {
-    setContent(initialContent);
+    if (!userHasEdited.current) {
+      setContent(initialContent);
+    }
   }, [initialContent]);
 
   // Auto-resize textarea
@@ -35,6 +41,7 @@ export default function DiaryEditor({ initialContent, saveStatus, onChange }: Di
   }, [content]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    userHasEdited.current = true;
     setContent(e.target.value);
     onChange(e.target.value);
   };

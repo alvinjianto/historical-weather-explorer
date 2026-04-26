@@ -1,44 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getAuthenticatedClient } from '@/lib/supabase/server';
 import { DiaryEntry, DiaryPhoto } from '@/types/diary';
 
 const SIGNED_URL_EXPIRY = 3600;
 
+interface DiaryEntryRow {
+  id: string;
+  date: string;
+  content: string;
+  location_name: string | null;
+  lat: number | null;
+  lng: number | null;
+  updated_at: string;
+}
+
+interface DiaryPhotoRow {
+  id: string;
+  storage_path: string;
+  filename: string;
+  created_at: string;
+}
+
 async function buildEntry(
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
-  row: Record<string, unknown>
+  supabase: Awaited<ReturnType<typeof getAuthenticatedClient>>['supabase'],
+  row: DiaryEntryRow
 ): Promise<DiaryEntry> {
   const { data: photoRows } = await supabase
     .from('diary_photos')
     .select('id, storage_path, filename, created_at')
-    .eq('diary_entry_id', row.id as string)
+    .eq('diary_entry_id', row.id)
     .is('deleted_at', null)
-    .order('created_at');
+    .order('created_at') as { data: DiaryPhotoRow[] | null };
 
-  const photos: DiaryPhoto[] = await Promise.all(
-    (photoRows ?? []).map(async (p) => {
-      const { data } = await supabase.storage
-        .from('diary-photos')
-        .createSignedUrl(p.storage_path as string, SIGNED_URL_EXPIRY);
-      return {
-        id: p.id as string,
-        filename: p.filename as string,
-        url: data?.signedUrl ?? '',
-        storagePath: p.storage_path as string,
-        createdAt: p.created_at as string,
-      };
-    })
-  );
+  const paths = (photoRows ?? []).map((p) => p.storage_path);
+  const { data: signedUrls } = paths.length > 0
+    ? await supabase.storage.from('diary-photos').createSignedUrls(paths, SIGNED_URL_EXPIRY)
+    : { data: [] };
+
+  const urlMap = new Map((signedUrls ?? []).map((s) => [s.path, s.signedUrl]));
+
+  const photos: DiaryPhoto[] = (photoRows ?? []).map((p) => ({
+    id: p.id,
+    filename: p.filename,
+    url: urlMap.get(p.storage_path) ?? '',
+    storagePath: p.storage_path,
+    createdAt: p.created_at,
+  }));
 
   return {
-    id: row.id as string,
-    date: row.date as string,
-    content: row.content as string,
-    locationName: (row.location_name as string | null) ?? null,
-    lat: (row.lat as number | null) ?? null,
-    lng: (row.lng as number | null) ?? null,
+    id: row.id,
+    date: row.date,
+    content: row.content,
+    locationName: row.location_name,
+    lat: row.lat,
+    lng: row.lng,
     photos,
-    updatedAt: row.updated_at as string,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -47,23 +64,21 @@ export async function GET(
   { params }: { params: Promise<{ date: string }> }
 ) {
   const { date } = await params;
-  const supabase = await createServerSupabaseClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { supabase, user, unauthorized } = await getAuthenticatedClient();
+  if (unauthorized) return unauthorized;
 
   const { data: row, error } = await supabase
     .from('diary_entries')
     .select('id, date, content, location_name, lat, lng, updated_at')
-    .eq('user_id', user.id)
+    .eq('user_id', user!.id)
     .eq('date', date)
     .is('deleted_at', null)
-    .maybeSingle();
+    .maybeSingle() as { data: DiaryEntryRow | null; error: unknown };
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: (error as { message: string }).message }, { status: 500 });
   if (!row) return NextResponse.json({ entry: null });
 
-  const entry = await buildEntry(supabase, row as Record<string, unknown>);
+  const entry = await buildEntry(supabase, row);
   return NextResponse.json({ entry });
 }
 
@@ -72,10 +87,8 @@ export async function POST(
   { params }: { params: Promise<{ date: string }> }
 ) {
   const { date } = await params;
-  const supabase = await createServerSupabaseClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { supabase, user, unauthorized } = await getAuthenticatedClient();
+  if (unauthorized) return unauthorized;
 
   const body = await request.json() as {
     content: string;
@@ -88,7 +101,7 @@ export async function POST(
     .from('diary_entries')
     .upsert(
       {
-        user_id: user.id,
+        user_id: user!.id,
         date,
         content: body.content,
         location_name: body.locationName ?? null,
@@ -99,10 +112,10 @@ export async function POST(
       { onConflict: 'user_id,date' }
     )
     .select('id, date, content, location_name, lat, lng, updated_at')
-    .single();
+    .single() as { data: DiaryEntryRow | null; error: unknown };
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: (error as { message: string }).message }, { status: 500 });
 
-  const entry = await buildEntry(supabase, row as Record<string, unknown>);
+  const entry = await buildEntry(supabase, row!);
   return NextResponse.json({ entry });
 }

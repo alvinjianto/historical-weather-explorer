@@ -6,7 +6,7 @@ import { Location } from '@/types/weather';
 
 const AUTOSAVE_DELAY_MS = 1000;
 
-export function useDiaryEntry(date: string | null, location: Location & { name: string } | null) {
+export function useDiaryEntry(date: string | null, location: (Location & { name: string }) | null) {
   const { user } = useAuth();
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +14,10 @@ export function useDiaryEntry(date: string | null, location: Location & { name: 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [uploadError, setUploadError] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keep location in a ref so saveContent doesn't recreate on every location change,
+  // which would orphan the pending debounce timer and silently drop in-progress saves.
+  const locationRef = useRef(location);
+  useEffect(() => { locationRef.current = location; }, [location]);
 
   useEffect(() => {
     if (!user || !date) {
@@ -28,6 +32,10 @@ export function useDiaryEntry(date: string | null, location: Location & { name: 
       .then((data) => setEntry(data.entry ?? null))
       .catch(console.error)
       .finally(() => setIsLoading(false));
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
   }, [user, date]);
 
   const saveContent = useCallback(
@@ -39,15 +47,16 @@ export function useDiaryEntry(date: string | null, location: Location & { name: 
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 
       saveTimerRef.current = setTimeout(async () => {
+        const loc = locationRef.current;
         try {
           const res = await fetch(`/api/diary/${date}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               content,
-              locationName: location?.name ?? null,
-              lat: location?.lat ?? null,
-              lng: location?.lng ?? null,
+              locationName: loc?.name ?? null,
+              lat: loc?.lat ?? null,
+              lng: loc?.lng ?? null,
             }),
           });
           const data = await res.json();
@@ -62,7 +71,7 @@ export function useDiaryEntry(date: string | null, location: Location & { name: 
         }
       }, AUTOSAVE_DELAY_MS);
     },
-    [date, location]
+    [date]
   );
 
   const uploadPhoto = useCallback(
@@ -79,11 +88,12 @@ export function useDiaryEntry(date: string | null, location: Location & { name: 
       setIsUploading(true);
 
       try {
+        const loc = locationRef.current;
         const formData = new FormData();
         formData.append('file', file);
-        if (location?.name) formData.append('locationName', location.name);
-        if (location?.lat != null) formData.append('lat', String(location.lat));
-        if (location?.lng != null) formData.append('lng', String(location.lng));
+        if (loc?.name) formData.append('locationName', loc.name);
+        if (loc?.lat != null) formData.append('lat', String(loc.lat));
+        if (loc?.lng != null) formData.append('lng', String(loc.lng));
 
         const res = await fetch(`/api/diary/${date}/photos`, {
           method: 'POST',
@@ -105,7 +115,7 @@ export function useDiaryEntry(date: string | null, location: Location & { name: 
         setIsUploading(false);
       }
     },
-    [date, location]
+    [date]
   );
 
   const deletePhoto = useCallback(

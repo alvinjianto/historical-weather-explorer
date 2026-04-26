@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DiaryPhoto } from '@/types/diary';
+
+const CONFIRM_RESET_MS = 3000;
 
 interface PhotoGalleryProps {
   photos: DiaryPhoto[];
@@ -12,6 +14,7 @@ interface PhotoGalleryProps {
 export default function PhotoGallery({ photos, onDelete }: PhotoGalleryProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   if (photos.length === 0) return null;
 
@@ -24,12 +27,15 @@ export default function PhotoGallery({ photos, onDelete }: PhotoGalleryProps) {
     setLightboxIndex((i) => (i !== null ? (i + 1) % photos.length : null));
 
   const handleDelete = (photoId: string) => {
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+
     if (confirmDeleteId === photoId) {
       onDelete(photoId);
       setConfirmDeleteId(null);
       if (lightboxIndex !== null) closeLightbox();
     } else {
       setConfirmDeleteId(photoId);
+      confirmTimerRef.current = setTimeout(() => setConfirmDeleteId(null), CONFIRM_RESET_MS);
     }
   };
 
