@@ -339,7 +339,7 @@ export default function Page() {
         <div className={cn(user && "lg:grid lg:grid-cols-[3fr_2fr] lg:gap-8 lg:items-start")}>
 
           {/* Weather column — hidden on mobile when diary tab is active */}
-          <div className={cn(user && activeTab === 'diary' && "hidden lg:block")}>
+          <div className={cn("min-w-0", user && activeTab === 'diary' && "hidden lg:block")}>
             <WeatherDisplay
               data={weatherData}
               loading={loading}
@@ -354,7 +354,7 @@ export default function Page() {
           {/* Diary column — hidden on mobile when weather tab is active, sticky on desktop */}
           {user && (
             <div className={cn(
-              "lg:sticky lg:top-8",
+              "min-w-0 lg:sticky lg:top-8",
               activeTab === 'weather' && "hidden lg:block"
             )}>
               <DiaryPanel
