@@ -120,7 +120,7 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans text-zinc-900 flex flex-col items-center py-12 px-4">
-      <div className="w-full max-w-6xl space-y-8">
+      <div className="w-full max-w-7xl space-y-8">
 
         {/* Auth error banner */}
         {authError && (
@@ -336,7 +336,7 @@ export default function Page() {
         )}
 
         {/* Main content — two columns on lg+, tabs on mobile */}
-        <div className={cn(user && "lg:grid lg:grid-cols-[3fr_2fr] lg:gap-8 lg:items-start")}>
+        <div className={cn(user && "lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start")}>
 
           {/* Weather column — hidden on mobile when diary tab is active */}
           <div className={cn("min-w-0", user && activeTab === 'diary' && "hidden lg:block")}>
