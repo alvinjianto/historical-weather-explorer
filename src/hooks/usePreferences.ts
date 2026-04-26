@@ -17,6 +17,7 @@ function readFromLocalStorage(): { unit: TempUnit; windUnit: WindUnit } {
 export function usePreferences(user: User | null) {
   const [unit, setUnitState] = useState<TempUnit>('F');
   const [windUnit, setWindUnitState] = useState<WindUnit>('mi');
+  const userId = user?.id ?? null;
 
   // Refs so setUnit/setWindUnit closures always read the latest sibling value
   const unitRef = useRef(unit);
@@ -33,11 +34,11 @@ export function usePreferences(user: User | null) {
 
   // Sync from DB on login; fall back to localStorage on logout
   useEffect(() => {
-    if (user) {
+    if (userId) {
       createClient()
         .from('user_preferences')
         .select('unit, wind_unit')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single()
         .then(({ data, error }) => {
           if (error) {
@@ -58,17 +59,17 @@ export function usePreferences(user: User | null) {
       setUnitState(unit);
       setWindUnitState(windUnit);
     }
-  }, [user]);
+  }, [userId]);
 
   const syncToDb = useCallback((u: TempUnit, w: WindUnit) => {
-    if (!user) return;
+    if (!userId) return;
     createClient().from('user_preferences').upsert({
-      user_id: user.id,
+      user_id: userId,
       unit: u,
       wind_unit: w,
       updated_at: new Date().toISOString(),
     }).then(() => {});
-  }, [user]);
+  }, [userId]);
 
   const setUnit = useCallback((u: TempUnit) => {
     setUnitState(u);
