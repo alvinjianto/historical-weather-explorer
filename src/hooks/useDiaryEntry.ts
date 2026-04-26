@@ -8,6 +8,7 @@ const AUTOSAVE_DELAY_MS = 1000;
 
 export function useDiaryEntry(date: string | null, location: (Location & { name: string }) | null) {
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -20,7 +21,7 @@ export function useDiaryEntry(date: string | null, location: (Location & { name:
   useEffect(() => { locationRef.current = location; }, [location]);
 
   useEffect(() => {
-    if (!user || !date) {
+    if (!userId || !date) {
       setEntry(null);
       setSaveStatus('idle');
       return;
@@ -36,7 +37,7 @@ export function useDiaryEntry(date: string | null, location: (Location & { name:
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [user, date]);
+  }, [userId, date]);
 
   const saveContent = useCallback(
     (content: string) => {
