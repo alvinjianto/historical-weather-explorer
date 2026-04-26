@@ -53,8 +53,8 @@ export default function DiaryEditor({ initialContent, saveStatus, onChange }: Di
         value={content}
         onChange={handleChange}
         placeholder="How was this day for you?"
-        className="w-full min-h-96 resize-none bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-3 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all leading-relaxed"
-        rows={16}
+        className="w-full min-h-72 resize-none bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-3 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all leading-relaxed"
+        rows={12}
       />
       <div className="flex items-center justify-between px-1">
         <span className="text-xs text-zinc-400">{content.length} characters</span>
