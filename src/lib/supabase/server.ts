@@ -24,9 +24,8 @@ export async function createServerSupabaseClient() {
 
 export async function getAuthenticatedClient() {
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.auth.getUser();
-  const user = data?.user ?? null;
-  if (error || !user) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     return { supabase, user: null, unauthorized: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
   return { supabase, user, unauthorized: null };
