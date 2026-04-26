@@ -75,11 +75,21 @@ export async function GET(
     .is('deleted_at', null)
     .maybeSingle() as { data: DiaryEntryRow | null; error: unknown };
 
-  if (error) return NextResponse.json({ error: (error as { message: string }).message }, { status: 500 });
+  // PGRST116 means zero rows — maybeSingle() shouldn't produce it, but handle
+  // it defensively so no-entry is never treated as a server error.
+  if (error) {
+    const code = (error as { code?: string }).code;
+    if (code === 'PGRST116') return NextResponse.json({ entry: null });
+    return NextResponse.json({ error: (error as { message: string }).message }, { status: 500 });
+  }
   if (!row) return NextResponse.json({ entry: null });
 
-  const entry = await buildEntry(supabase, row);
-  return NextResponse.json({ entry });
+  try {
+    const entry = await buildEntry(supabase, row);
+    return NextResponse.json({ entry });
+  } catch {
+    return NextResponse.json({ error: 'Failed to load entry' }, { status: 500 });
+  }
 }
 
 export async function POST(
