@@ -24,7 +24,7 @@ interface WeatherDisplayProps {
 const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ data, loading, error, unit, windUnit, locationName, onRetry }) => {
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[400px] space-y-6 bg-white rounded-[2.5rem] border border-zinc-200 shadow-sm animate-pulse">
+      <div className="flex flex-col items-center justify-center h-[400px] space-y-6 bg-white rounded-3xl border border-zinc-200 shadow-sm animate-pulse">
         <div className="w-24 h-24 bg-zinc-100 rounded-3xl" />
         <div className="space-y-3 flex flex-col items-center">
           <div className="h-4 w-48 bg-zinc-100 rounded-full" />
@@ -36,7 +36,7 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ data, loading, error, u
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-[400px] p-8 text-center bg-red-50/50 rounded-[2.5rem] border border-red-100">
+      <div className="flex flex-col items-center justify-center h-[400px] p-8 text-center bg-red-50/50 rounded-3xl border border-red-100">
         <div className="p-4 bg-red-100 rounded-2xl mb-4">
           <AlertCircle className="w-8 h-8 text-red-600" />
         </div>
@@ -58,7 +58,7 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ data, loading, error, u
 
   if (!data) {
     return (
-      <div className="flex flex-col items-center justify-center h-[400px] p-8 text-center bg-white rounded-[2.5rem] border border-zinc-200 border-dashed">
+      <div className="flex flex-col items-center justify-center h-[400px] p-8 text-center bg-white rounded-3xl border border-zinc-200 border-dashed">
         <div className="p-4 bg-zinc-50 rounded-2xl mb-4">
           <CloudSun className="w-8 h-8 text-zinc-300" />
         </div>
@@ -76,7 +76,7 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ data, loading, error, u
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 border border-zinc-100 space-y-8 sm:space-y-10 relative overflow-hidden"
+      className="bg-white p-8 sm:p-10 rounded-3xl shadow-sm border border-zinc-200 space-y-8 sm:space-y-10 relative overflow-hidden"
     >
       <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-zinc-50 rounded-full blur-3xl opacity-50" />
 
