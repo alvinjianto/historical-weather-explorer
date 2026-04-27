@@ -27,11 +27,21 @@ describe('validatePhotoFile', () => {
     expect(validatePhotoFile(file)).toEqual({ valid: true });
   });
 
+  it('accepts valid HEIC files', () => {
+    const file = makeFile('photo.heic', 'image/heic', 1024);
+    expect(validatePhotoFile(file)).toEqual({ valid: true });
+  });
+
+  it('accepts valid HEIF files', () => {
+    const file = makeFile('photo.heif', 'image/heif', 1024);
+    expect(validatePhotoFile(file)).toEqual({ valid: true });
+  });
+
   it('rejects non-image files', () => {
     const file = makeFile('document.pdf', 'application/pdf', 1024);
     const result = validatePhotoFile(file);
     expect(result.valid).toBe(false);
-    expect(result.error).toMatch(/PNG|JPEG|WebP|GIF/);
+    expect(result.error).toMatch(/PNG|JPEG|WebP|GIF|HEIC/);
   });
 
   it('rejects files over 10 MB', () => {

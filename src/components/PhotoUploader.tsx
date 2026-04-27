@@ -50,11 +50,11 @@ export default function PhotoUploader({ isUploading, error, onUpload, onClearErr
         <p className="text-xs text-zinc-500 text-center">
           {isUploading ? 'Uploading...' : 'Drop a photo here or click to browse'}
         </p>
-        <p className="text-xs text-zinc-400">PNG, JPEG, WebP, GIF — max 10 MB</p>
+        <p className="text-xs text-zinc-400">PNG, JPEG, WebP, GIF, HEIC — max 10 MB</p>
         <input
           ref={inputRef}
           type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif"
+          accept="image/png,image/jpeg,image/webp,image/gif,image/heic,image/heif"
           className="hidden"
           onChange={(e) => handleFiles(e.target.files)}
           disabled={isUploading}
