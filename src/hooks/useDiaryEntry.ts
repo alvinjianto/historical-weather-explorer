@@ -103,10 +103,9 @@ export function useDiaryEntry(date: string | null, location: (Location & { name:
 
         const data = await res.json();
         if (res.ok) {
-          setEntry((prev) => {
-            if (!prev) return prev;
-            return { ...prev, photos: [...prev.photos, data.photo as DiaryPhoto] };
-          });
+          const entryRes = await fetch(`/api/diary/${date}`);
+          const entryData = await entryRes.json();
+          setEntry(entryData.entry);
         } else {
           setUploadError(data.error ?? 'Upload failed');
         }

@@ -152,12 +152,14 @@ describe('useDiaryEntry', () => {
     expect(result.current.entry?.photos).toHaveLength(0);
   });
 
-  it('appends uploaded photo to entry on successful upload', async () => {
+  it('refetches the full entry after a successful upload', async () => {
     const newPhoto = { id: 'p-new', filename: 'new.jpg', url: 'http://x/new.jpg', storagePath: 'u/d/new.jpg', createdAt: '' };
+    const entryWithPhoto = { ...mockEntry, photos: [newPhoto] };
 
     vi.mocked(global.fetch)
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ entry: mockEntry }) } as Response)
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ photo: newPhoto }) } as Response);
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ entry: mockEntry }) } as Response)   // initial GET
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ photo: newPhoto }) } as Response)    // POST upload
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ entry: entryWithPhoto }) } as Response); // refetch GET
 
     const { result } = renderHook(() => useDiaryEntry('2025-04-25', mockLocation));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -169,6 +171,7 @@ describe('useDiaryEntry', () => {
     expect(result.current.uploadError).toBeNull();
     expect(result.current.entry?.photos).toHaveLength(1);
     expect(result.current.entry?.photos[0]).toEqual(newPhoto);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 
   it('sets uploadError when server rejects the upload', async () => {
