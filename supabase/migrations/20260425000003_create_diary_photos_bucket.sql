@@ -4,6 +4,6 @@ values (
   'diary-photos',
   false,
   10485760,
-  array['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
+  array['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 )
 on conflict (id) do nothing;
