@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 import { validatePhotoFile } from '@/lib/diary';
 import { DiaryEntry, DiaryPhoto, SaveStatus } from '@/types/diary';
 import { Location } from '@/types/weather';
@@ -90,25 +91,55 @@ export function useDiaryEntry(date: string | null, location: (Location & { name:
 
       try {
         const loc = locationRef.current;
-        const formData = new FormData();
-        formData.append('file', file);
-        if (loc?.name) formData.append('locationName', loc.name);
-        if (loc?.lat != null) formData.append('lat', String(loc.lat));
-        if (loc?.lng != null) formData.append('lng', String(loc.lng));
 
-        const res = await fetch(`/api/diary/${date}/photos`, {
+        // Step 1: get a signed upload URL and create/find the diary entry
+        const urlRes = await fetch(`/api/diary/${date}/photos/upload-url`, {
           method: 'POST',
-          body: formData,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type,
+            size: file.size,
+            locationName: loc?.name ?? null,
+            lat: loc?.lat ?? null,
+            lng: loc?.lng ?? null,
+          }),
         });
-
-        const data = await res.json();
-        if (res.ok) {
-          const entryRes = await fetch(`/api/diary/${date}`);
-          const entryData = await entryRes.json();
-          setEntry(entryData.entry);
-        } else {
-          setUploadError(data.error ?? 'Upload failed');
+        const urlData = await urlRes.json();
+        if (!urlRes.ok) {
+          setUploadError(urlData.error ?? 'Upload failed');
+          return;
         }
+
+        // Step 2: upload directly from the browser to Supabase Storage
+        const supabase = createClient();
+        const { error: uploadError } = await supabase.storage
+          .from('diary-photos')
+          .uploadToSignedUrl(urlData.storagePath, urlData.token, file, { contentType: file.type });
+        if (uploadError) {
+          setUploadError(uploadError.message);
+          return;
+        }
+
+        // Step 3: record the photo in the database
+        const recordRes = await fetch(`/api/diary/${date}/photos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storagePath: urlData.storagePath,
+            filename: file.name,
+            entryId: urlData.entryId,
+          }),
+        });
+        const recordData = await recordRes.json();
+        if (!recordRes.ok) {
+          setUploadError(recordData.error ?? 'Upload failed');
+          return;
+        }
+
+        const entryRes = await fetch(`/api/diary/${date}`);
+        const entryData = await entryRes.json();
+        setEntry(entryData.entry);
       } catch {
         setUploadError('Upload failed. Please try again.');
       } finally {
