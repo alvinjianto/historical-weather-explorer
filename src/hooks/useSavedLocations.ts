@@ -19,6 +19,7 @@ function persist(locs: SavedLocation[]) {
 export function useSavedLocations(user: User | null) {
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const userId = user?.id ?? null;
 
   // Bootstrap from localStorage on mount
   useEffect(() => {
@@ -27,11 +28,11 @@ export function useSavedLocations(user: User | null) {
 
   // Sync from DB on login; fall back to localStorage on logout
   useEffect(() => {
-    if (user) {
+    if (userId) {
       createClient()
         .from('saved_locations')
         .select('id, name, lat, lng')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at')
         .then(({ data, error }) => {
           if (error) {
@@ -52,7 +53,7 @@ export function useSavedLocations(user: User | null) {
     } else {
       setSavedLocations(readFromLocalStorage());
     }
-  }, [user]);
+  }, [userId]);
 
   const saveLocation = async (location: Location, name: string) => {
     setLocationError(null);

@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, subDays, addDays, parseISO, isBefore, startOfDay } from 'date-fns';
-import { MapPin, Calendar, Clock, Navigation, ChevronLeft, ChevronRight, Bookmark, BookmarkPlus, X } from 'lucide-react';
+import { MapPin, Calendar, Clock, Navigation, ChevronLeft, ChevronRight, Bookmark, BookmarkPlus, X, CloudSun, BookOpen } from 'lucide-react';
 import WeatherDisplay from '@/components/WeatherDisplay';
+import DiaryPanel from '@/components/DiaryPanel';
 import SearchComponent from '@/components/SearchComponent';
 import SavedLocations from '@/components/SavedLocations';
 import AuthButton from '@/components/AuthButton';
@@ -18,6 +19,8 @@ import { cn } from '@/lib/utils';
 const DEFAULT_LOCATION: Location = { lat: 51.505, lng: -0.09 };
 const DEFAULT_LOCATION_NAME = 'London, United Kingdom';
 
+type MobileTab = 'weather' | 'diary';
+
 export default function Page() {
   const { user } = useAuth();
 
@@ -27,6 +30,7 @@ export default function Page() {
   const [selectedHour, setSelectedHour] = useState<number>(new Date().getHours());
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<MobileTab>('weather');
 
   const { unit, windUnit, setUnit, setWindUnit } = usePreferences(user);
   const { savedLocations, locationError, clearLocationError, saveLocation, removeLocation, isLocationSaved } = useSavedLocations(user);
@@ -116,7 +120,7 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans text-zinc-900 flex flex-col items-center py-12 px-4">
-      <div className="w-full max-w-4xl space-y-12">
+      <div className="w-full max-w-7xl space-y-8">
 
         {/* Auth error banner */}
         {authError && (
@@ -138,7 +142,7 @@ export default function Page() {
           </div>
         )}
 
-        <header className="space-y-12">
+        <header className="space-y-8">
           <div className="flex items-start justify-between">
             <div className="flex flex-col items-start space-y-1 flex-1 min-w-0 pr-6">
               <div className="inline-flex items-center justify-center p-3 bg-zinc-900 rounded-2xl shadow-lg">
@@ -307,17 +311,58 @@ export default function Page() {
           )}
         </div>
 
-        {/* Results Display */}
-        <div>
-          <WeatherDisplay
-            data={weatherData}
-            loading={loading}
-            error={weatherError}
-            unit={unit}
-            windUnit={windUnit}
-            locationName={locationName}
-            onRetry={() => fetchWeatherData(location, selectedDate, selectedHour)}
-          />
+        {/* Mobile tab bar — only shown when logged in, hidden on lg+ */}
+        {user && (
+          <div className="flex lg:hidden bg-zinc-100 p-1 rounded-2xl">
+            <button
+              onClick={() => setActiveTab('weather')}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all",
+                activeTab === 'weather' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
+              )}
+            >
+              <CloudSun className="w-4 h-4" /> Weather
+            </button>
+            <button
+              onClick={() => setActiveTab('diary')}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all",
+                activeTab === 'diary' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
+              )}
+            >
+              <BookOpen className="w-4 h-4" /> Diary
+            </button>
+          </div>
+        )}
+
+        {/* Main content — two columns on lg+, tabs on mobile */}
+        <div className={cn(user && "lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start")}>
+
+          {/* Weather column — hidden on mobile when diary tab is active */}
+          <div className={cn("min-w-0", user && activeTab === 'diary' && "hidden lg:block")}>
+            <WeatherDisplay
+              data={weatherData}
+              loading={loading}
+              error={weatherError}
+              unit={unit}
+              windUnit={windUnit}
+              locationName={locationName}
+              onRetry={() => fetchWeatherData(location, selectedDate, selectedHour)}
+            />
+          </div>
+
+          {/* Diary column — hidden on mobile when weather tab is active, sticky on desktop */}
+          {user && (
+            <div className={cn(
+              "min-w-0 lg:sticky lg:top-8",
+              activeTab === 'weather' && "hidden lg:block"
+            )}>
+              <DiaryPanel
+                date={selectedDate}
+                location={{ ...location, name: locationName }}
+              />
+            </div>
+          )}
         </div>
 
         <footer className="pt-12 border-t border-zinc-200 text-center">
