@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, subDays, addDays, parseISO, isBefore, startOfDay } from 'date-fns';
+import Link from 'next/link';
 import { MapPin, Calendar, Clock, Navigation, ChevronLeft, ChevronRight, Bookmark, BookmarkPlus, X, CloudSun, BookOpen } from 'lucide-react';
 import WeatherDisplay from '@/components/WeatherDisplay';
 import DiaryPanel from '@/components/DiaryPanel';
@@ -37,11 +38,17 @@ export default function Page() {
   const { weatherData, loading, error: weatherError, fetchWeatherData } = useWeatherData();
   const { isLocating, getCurrentPosition } = useGeolocation();
 
-  // Surface OAuth errors passed back via ?error=auth
+  // Surface OAuth errors passed back via ?error=auth, and read ?date= from diary browser links
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('error') === 'auth') {
       setAuthError('Sign-in failed. Please try again.');
+      window.history.replaceState({}, '', '/');
+      return;
+    }
+    const dateParam = params.get('date');
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      setSelectedDate(dateParam);
       window.history.replaceState({}, '', '/');
     }
   }, []);
@@ -153,7 +160,15 @@ export default function Page() {
                 Discover precise atmospheric conditions from any point in time, anywhere in the world.
               </p>
             </div>
-            <div className="pt-1">
+            <div className="flex items-center gap-3 pt-1">
+              {user && (
+                <Link
+                  href="/diary"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-zinc-500 hover:text-zinc-900 transition-colors"
+                >
+                  <BookOpen className="w-4 h-4" /> My Diary
+                </Link>
+              )}
               <AuthButton />
             </div>
           </div>
