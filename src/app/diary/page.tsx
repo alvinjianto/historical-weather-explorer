@@ -64,6 +64,7 @@ function useDiaryList(enabled: boolean, userId: string | null) {
 
   useEffect(() => {
     if (!enabled) return;
+    // hasFetched guards against re-firing when loadMore is recreated (e.g. when enabled toggles)
     if (hasFetched.current) return;
     hasFetched.current = true;
     loadMore(0);

@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-function parseCoordinate(value: string | null, min: number, max: number): number | null {
-  if (!value) return null;
-  const coordinate = Number(value);
-  if (!Number.isFinite(coordinate) || coordinate < min || coordinate > max) return null;
-  return coordinate;
-}
+import { parseCoordinate } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;

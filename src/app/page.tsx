@@ -91,7 +91,9 @@ export default function Page() {
     }
   }, [reverseGeocode]);
 
-  // On mount: try geolocation, fall back to London
+  // On mount: try geolocation, fall back to London.
+  // Relies on the URL-restore effect above running first (React runs effects in declaration order),
+  // so restoredLocationFromUrlRef.current is already set by the time this check executes.
   useEffect(() => {
     if (restoredLocationFromUrlRef.current) return;
     getCurrentPosition(

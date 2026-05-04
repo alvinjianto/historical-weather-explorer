@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { parseCoordinate } from '@/lib/api-utils';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const ARCHIVE_LAG_DAYS = 7;
-
-function parseCoordinate(value: string | null, min: number, max: number): number | null {
-  if (!value) return null;
-  const coordinate = Number(value);
-  if (!Number.isFinite(coordinate) || coordinate < min || coordinate > max) return null;
-  return coordinate;
-}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;

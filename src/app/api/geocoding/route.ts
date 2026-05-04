@@ -3,10 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const name = searchParams.get('name');
-  const requestedCount = Number(searchParams.get('count') ?? '5');
-  const count = Number.isInteger(requestedCount)
-    ? Math.min(10, Math.max(1, requestedCount))
-    : 5;
+  const requestedCount = parseInt(searchParams.get('count') ?? '', 10);
+  const count = Number.isNaN(requestedCount) ? 5 : Math.min(10, Math.max(1, requestedCount));
 
   if (!name?.trim()) {
     return NextResponse.json({ error: 'Missing name parameter' }, { status: 400 });
