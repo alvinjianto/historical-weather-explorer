@@ -1,6 +1,7 @@
 import { PhotoValidationResult } from '@/types/diary';
 
-const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25 MiB
+export const MAX_FILE_SIZE_MB = 25;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
 export function validatePhotoMeta(contentType: string, size: number): PhotoValidationResult {

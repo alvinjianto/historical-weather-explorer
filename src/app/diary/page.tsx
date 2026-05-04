@@ -29,7 +29,7 @@ interface PhotoWithDate extends DiaryPhoto {
 
 type ViewMode = 'timeline' | 'photos';
 
-function useDiaryList() {
+function useDiaryList(enabled: boolean, userId: string | null) {
   const [entries, setEntries] = useState<EntryListItem[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -39,6 +39,7 @@ function useDiaryList() {
   const hasFetched = useRef(false);
 
   const loadMore = useCallback(async (currentPage: number) => {
+    if (!enabled) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/diary?page=${currentPage}`);
@@ -51,14 +52,23 @@ function useDiaryList() {
       setLoading(false);
       setInitialLoaded(true);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
+    hasFetched.current = false;
+    setEntries([]);
+    setPage(0);
+    setHasMore(true);
+    setInitialLoaded(false);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    // hasFetched guards against re-firing when loadMore is recreated (e.g. when enabled toggles)
     if (hasFetched.current) return;
     hasFetched.current = true;
     loadMore(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enabled, loadMore]);
 
   const loadNext = useCallback(() => loadMore(page), [loadMore, page]);
 
@@ -227,7 +237,7 @@ export default function DiaryBrowserPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [view, setView] = useState<ViewMode>('timeline');
-  const { entries, hasMore, loading, initialLoaded, loadNext } = useDiaryList();
+  const { entries, hasMore, loading, initialLoaded, loadNext } = useDiaryList(!authLoading && !!user, user?.id ?? null);
 
   useEffect(() => {
     if (!authLoading && !user) {
