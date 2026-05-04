@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { ImagePlus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MAX_FILE_SIZE_MB } from '@/lib/diary';
 
 interface PhotoUploaderProps {
   isUploading: boolean;
@@ -50,7 +51,7 @@ export default function PhotoUploader({ isUploading, error, onUpload, onClearErr
         <p className="text-xs text-zinc-500 text-center">
           {isUploading ? 'Uploading...' : 'Drop a photo here or click to browse'}
         </p>
-        <p className="text-xs text-zinc-400">PNG, JPEG, WebP, GIF — max 10 MB</p>
+        <p className="text-xs text-zinc-400">PNG, JPEG, WebP, GIF — max {MAX_FILE_SIZE_MB} MB</p>
         <input
           ref={inputRef}
           type="file"
