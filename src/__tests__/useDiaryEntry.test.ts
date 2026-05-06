@@ -7,6 +7,16 @@ vi.mock('@/context/AuthContext', () => ({
   useAuth: vi.fn(),
 }));
 
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: vi.fn(() => ({
+    storage: {
+      from: vi.fn(() => ({
+        uploadToSignedUrl: vi.fn().mockResolvedValue({ error: null }),
+      })),
+    },
+  })),
+}));
+
 import { useAuth } from '@/context/AuthContext';
 
 const mockUser = { id: 'user-123', email: 'test@example.com' };
@@ -158,7 +168,8 @@ describe('useDiaryEntry', () => {
 
     vi.mocked(global.fetch)
       .mockResolvedValueOnce({ ok: true, json: async () => ({ entry: mockEntry }) } as Response)   // initial GET
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ photo: newPhoto }) } as Response)    // POST upload
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ storagePath: 'u/d/new.jpg', token: 'tok', entryId: 'entry-1' }) } as Response) // POST upload-url
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ photo: newPhoto }) } as Response)    // POST record photo
       .mockResolvedValueOnce({ ok: true, json: async () => ({ entry: entryWithPhoto }) } as Response); // refetch GET
 
     const { result } = renderHook(() => useDiaryEntry('2025-04-25', mockLocation));
@@ -171,7 +182,7 @@ describe('useDiaryEntry', () => {
     expect(result.current.uploadError).toBeNull();
     expect(result.current.entry?.photos).toHaveLength(1);
     expect(result.current.entry?.photos[0]).toEqual(newPhoto);
-    expect(global.fetch).toHaveBeenCalledTimes(3);
+    expect(global.fetch).toHaveBeenCalledTimes(4);
   });
 
   it('sets uploadError when server rejects the upload', async () => {
