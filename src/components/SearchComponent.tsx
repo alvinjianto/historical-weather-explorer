@@ -41,6 +41,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onLocationSelect, cur
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       if (query.trim().length < 2) {
         setResults([]);
@@ -49,18 +50,25 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onLocationSelect, cur
 
       setLoading(true);
       try {
-        const response = await fetch(`/api/geocoding?name=${encodeURIComponent(query)}&count=5`);
+        const response = await fetch(`/api/geocoding?name=${encodeURIComponent(query)}&count=5`, {
+          signal: controller.signal,
+        });
         const data = await response.json();
         setResults(data.results || []);
         setIsOpen(true);
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error('Geocoding error:', error);
       } finally {
+        if (controller.signal.aborted) return;
         setLoading(false);
       }
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
   }, [query]);
 
   const handleSelect = (result: GeocodingResult) => {
