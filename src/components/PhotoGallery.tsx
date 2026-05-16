@@ -1,10 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DiaryPhoto } from '@/types/diary';
-
-const CONFIRM_RESET_MS = 3000;
 
 interface PhotoGalleryProps {
   photos: DiaryPhoto[];
@@ -14,7 +12,6 @@ interface PhotoGalleryProps {
 export default function PhotoGallery({ photos, onDelete }: PhotoGalleryProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   if (photos.length === 0) return null;
 
@@ -26,17 +23,10 @@ export default function PhotoGallery({ photos, onDelete }: PhotoGalleryProps) {
   const nextPhoto = () =>
     setLightboxIndex((i) => (i !== null ? (i + 1) % photos.length : null));
 
-  const handleDelete = (photoId: string) => {
-    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
-
-    if (confirmDeleteId === photoId) {
-      onDelete(photoId);
-      setConfirmDeleteId(null);
-      if (lightboxIndex !== null) closeLightbox();
-    } else {
-      setConfirmDeleteId(photoId);
-      confirmTimerRef.current = setTimeout(() => setConfirmDeleteId(null), CONFIRM_RESET_MS);
-    }
+  const confirmDelete = (photoId: string) => {
+    onDelete(photoId);
+    setConfirmDeleteId(null);
+    if (lightboxIndex !== null) closeLightbox();
   };
 
   return (
@@ -50,13 +40,33 @@ export default function PhotoGallery({ photos, onDelete }: PhotoGalleryProps) {
               className="w-full h-full object-cover rounded-xl cursor-pointer"
               onClick={() => openLightbox(index)}
             />
-            <button
-              onClick={() => handleDelete(photo.id)}
-              className="absolute top-1.5 right-1.5 p-1 rounded-lg bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-              title={confirmDeleteId === photo.id ? 'Click again to confirm' : 'Delete photo'}
-            >
-              <Trash2 className={`w-3.5 h-3.5 ${confirmDeleteId === photo.id ? 'text-red-400' : ''}`} />
-            </button>
+            {confirmDeleteId === photo.id ? (
+              <div className="absolute top-1.5 right-1.5 flex items-center gap-1 bg-black/80 rounded-lg px-1.5 py-1">
+                <span className="text-white/80 text-xs">Delete?</span>
+                <button
+                  onClick={() => confirmDelete(photo.id)}
+                  className="text-red-400 hover:text-red-300 transition-colors"
+                  title="Confirm delete"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="text-white/60 hover:text-white transition-colors"
+                  title="Cancel"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDeleteId(photo.id)}
+                className="absolute top-1.5 right-1.5 p-1 rounded-lg bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Delete photo"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         ))}
       </div>

@@ -6,10 +6,10 @@ const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'
 
 export function validatePhotoMeta(contentType: string, size: number): PhotoValidationResult {
   if (!ALLOWED_MIME_TYPES.includes(contentType)) {
-    return { valid: false, error: 'Only PNG, JPEG, WebP, and GIF images are allowed.' };
+    return { valid: false, error: 'Only PNG, JPEG, WebP, GIF, and HEIC/HEIF images are allowed.' };
   }
   if (size > MAX_FILE_SIZE_BYTES) {
-    return { valid: false, error: 'File must be smaller than 25 MB.' };
+    return { valid: false, error: 'File must be smaller than 10 MB.' };
   }
   return { valid: true };
 }
