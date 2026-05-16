@@ -28,14 +28,17 @@ export function useDiaryEntry(date: string | null, location: (Location & { name:
       return;
     }
 
+    let cancelled = false;
     setIsLoading(true);
+
     fetch(`/api/diary/${date}`)
       .then((r) => r.json())
-      .then((data) => setEntry(data.entry ?? null))
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
+      .then((data) => { if (!cancelled) setEntry(data.entry ?? null); })
+      .catch((err) => { if (!cancelled) console.error(err); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
 
     return () => {
+      cancelled = true;
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
   }, [userId, date]);

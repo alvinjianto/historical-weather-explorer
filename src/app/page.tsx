@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { format, subDays, addDays, parseISO, isBefore, startOfDay } from 'date-fns';
+import Link from 'next/link';
 import { MapPin, Calendar, Clock, Navigation, ChevronLeft, ChevronRight, Bookmark, BookmarkPlus, X, CloudSun, BookOpen } from 'lucide-react';
 import WeatherDisplay from '@/components/WeatherDisplay';
 import DiaryPanel from '@/components/DiaryPanel';
@@ -31,20 +32,12 @@ export default function Page() {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<MobileTab>('weather');
+  const restoredLocationFromUrlRef = useRef(false);
 
   const { unit, windUnit, setUnit, setWindUnit } = usePreferences(user);
   const { savedLocations, locationError, clearLocationError, saveLocation, removeLocation, isLocationSaved } = useSavedLocations(user);
   const { weatherData, loading, error: weatherError, fetchWeatherData } = useWeatherData();
   const { isLocating, getCurrentPosition } = useGeolocation();
-
-  // Surface OAuth errors passed back via ?error=auth
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('error') === 'auth') {
-      setAuthError('Sign-in failed. Please try again.');
-      window.history.replaceState({}, '', '/');
-    }
-  }, []);
 
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
     setIsGeocoding(true);
@@ -65,8 +58,44 @@ export default function Page() {
     }
   }, []);
 
-  // On mount: try geolocation, fall back to London
+  // Surface OAuth errors passed back via ?error=auth, and restore diary browser links
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'auth') {
+      setAuthError('Sign-in failed. Please try again.');
+      window.history.replaceState({}, '', '/');
+      return;
+    }
+    const dateParam = params.get('date');
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      setSelectedDate(dateParam);
+    }
+    const latParam = params.get('lat');
+    const lngParam = params.get('lng');
+    const lat = latParam ? Number(latParam) : NaN;
+    const lng = lngParam ? Number(lngParam) : NaN;
+    if (
+      Number.isFinite(lat) &&
+      Number.isFinite(lng) &&
+      lat >= -90 &&
+      lat <= 90 &&
+      lng >= -180 &&
+      lng <= 180
+    ) {
+      restoredLocationFromUrlRef.current = true;
+      setLocation({ lat, lng });
+      reverseGeocode(lat, lng);
+    }
+    if (dateParam || latParam || lngParam) {
+      window.history.replaceState({}, '', '/');
+    }
+  }, [reverseGeocode]);
+
+  // On mount: try geolocation, fall back to London.
+  // Relies on the URL-restore effect above running first (React runs effects in declaration order),
+  // so restoredLocationFromUrlRef.current is already set by the time this check executes.
+  useEffect(() => {
+    if (restoredLocationFromUrlRef.current) return;
     getCurrentPosition(
       (lat, lng) => {
         const newLoc = { lat, lng };
@@ -153,7 +182,15 @@ export default function Page() {
                 Discover precise atmospheric conditions from any point in time, anywhere in the world.
               </p>
             </div>
-            <div className="pt-1">
+            <div className="flex items-center gap-3 pt-1">
+              {user && (
+                <Link
+                  href="/diary"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-zinc-500 hover:text-zinc-900 transition-colors"
+                >
+                  <BookOpen className="w-4 h-4" /> My Diary
+                </Link>
+              )}
               <AuthButton />
             </div>
           </div>

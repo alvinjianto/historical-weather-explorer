@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Location, WeatherData } from '@/types/weather';
 import { parseWeatherResponse } from '@/lib/weatherParser';
 
@@ -6,8 +6,11 @@ export function useWeatherData() {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   const fetchWeatherData = useCallback(async (loc: Location, date: string, hour: number) => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setLoading(true);
     setError(null);
     try {
@@ -19,12 +22,16 @@ export function useWeatherData() {
       const data = await response.json();
       if (!data.hourly?.time) throw new Error('No data available for this date');
 
+      if (requestId !== requestIdRef.current) return;
       setWeatherData(parseWeatherResponse(data, hour));
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setError(err instanceof Error ? err.message : 'An error occurred');
       setWeatherData(null);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
